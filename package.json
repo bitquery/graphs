@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
-    "font-awesome-scss": "^1.0.0",
     "graphql": "^15.3.0",
     "jquery": "^3.5.1",
     "lodash": "^4.17.20",

@@ -17,7 +17,7 @@
     <div class="container-fluid">
       <div class="row">
         <div class="col-12 col-lg-12 mb-4">
-          <div class="card bg-dark text-white">
+          <div class="card dark text-white">
             <div class="card-header">Graph</div>
             <div class="card-body" style="padding: 0">
               <div id="graph"></div>
@@ -92,7 +92,7 @@
 				}
 				`) // определяем query
 
-        new graphs.address_graph('#graph', query, {
+        window.graph = new graphs.address_graph('#graph', window.query, {
 					//  title: '<%= t('tabs.address.graph.name') %>',
 					title: 'Title from options'
         })
