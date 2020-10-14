@@ -2,6 +2,11 @@
 import _ from 'lodash'
 import _n from 'numeral'
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min'
+import { CurrencyFilter } from './components/CurrencyFilter'
+import { CurrencyFilterOption } from './components/CurrencyFilterOption'
+import { DetailLevel } from './components/DetailLevel'
+import { DetailLevelPopup } from './components/DetailLevelPopup'
+import { FullscreenButton } from './components/FullscreenButton'
 import { getCurrencies } from './currencies'
 import { darkenColor } from './darkenColor'
 import './style.scss'
@@ -12,22 +17,40 @@ export function query(query) {
     initVariables: {},
 
     data: null,
-    setData: function(data, expand = false) {
-      if (expand) {
-        this.data.push(data)
-      } else {
-				this.data = [data]
-				_.each(this.components, (component) => component.dataset = null)
-      }
+    setData: function(data, isExpand) {
+      this.data = data
 
       //notify components
       _.each(this.components, (component) => {
-        component.render()
+        component.render(isExpand)
       })
     },
     components: [],
 
-    request: function(variables, expand = false) {
+    request: function(variables, isExpand = false) {
+      // let intervals = {}
+      // _.each(it.components, function(component) {
+      //   let loading =
+      //     '<div style="margin: 10px;">' +
+      //     '<span>Loading...</span>' +
+      //     '<div style="background-color: #eeeeee"><div style="width: 0%; height:4px; background-color: #007bff"></div></div>' +
+      //     '<span style="font-size: 12px;float: left"">0</span><span style="font-size: 12px;float: right">100</span>' +
+      //     '</div>'
+      //   _.each(utils.select(component.selector).elements, function(element) {
+      //     element.innerHTML = loading
+      //     let line = utils.select(component.selector + '>div>div>div')
+      //       .elements[0]
+      //     let i = 1
+      //     intervals[component.selector] = setInterval(function() {
+      //       if (i > Math.floor(Math.random() * 15) + 84) {
+      //         clearInterval(intervals[component.selector])
+      //       }
+      //       line.style.width = i + '%'
+      //       i = i + 1
+      //     }, 40)
+      //   })
+      // })
+
       fetch('https://graphql.bitquery.io', {
         method: 'POST',
         headers: {
@@ -41,13 +64,11 @@ export function query(query) {
       })
         .then((r) => r.json())
         .then((data) => {
-					console.log(this.variables)
-          if (data) {
-            this.setData(data['data'], expand)
-					}
-					if (_.isEmpty(this.initVariables)) {
-						this.initVariables = variables
-					}
+          if (_.isEmpty(this.initVariables)) {
+            this.initVariables = variables
+          }
+
+          this.setData(data['data'], isExpand)
         })
     },
   }
@@ -55,20 +76,30 @@ export function query(query) {
 
 export function address_graph(selector, query, options) {
   const currencies = getCurrencies()
-  const currency = (
-    _.find(currencies, { address: query.initVariables.currency }) || currencies[0]
+  let currency = (
+    _.find(currencies, { address: query.initVariables.currency }) ||
+    currencies[0]
   ).symbol
   // const currency = 'Ether'
 
+  this.theme = options.theme || 'light'
+
   this.container = document.querySelector(selector)
-  $(this.container)
-    .parent()
-    .parent()
+  const jqContainer = $(this.container)
+  jqContainer
+    .parents('div')
     .find('.card-header')
     .text(options.title || 'Default graph title')
 
+  if (options.theme == 'dark') {
+    jqContainer
+      .parents('div')
+      .find('.card')
+      .addClass('dark')
+  }
+
   this.networkOptions = {
-    height: '600px',
+    height: '100%',
     physics: {
       stabilization: {
         enabled: false,
@@ -92,7 +123,7 @@ export function address_graph(selector, query, options) {
           color: '#f0a30a',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
       multisig: {
@@ -105,7 +136,7 @@ export function address_graph(selector, query, options) {
           color: '#03a9f4',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
       address: {
@@ -115,10 +146,10 @@ export function address_graph(selector, query, options) {
           code: '\uf007',
           weight: 900,
           size: 40,
-          color: '#00dbb7',
+          color: this.theme == 'dark' ? '#00dbb7' : '#009688',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
       annotated_address: {
@@ -128,10 +159,10 @@ export function address_graph(selector, query, options) {
           code: '\uf007',
           weight: 900,
           size: 40,
-          color: '#00967b',
+          color: this.theme == 'dark' ? '#00967b' : '#006650',
         },
         font: {
-          background: '#00967b',
+          background: this.theme == 'dark' ? '#00967b' : '#006650',
           color: '#ffffff',
         },
       },
@@ -145,7 +176,7 @@ export function address_graph(selector, query, options) {
           color: '#ff5722',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
       dex: {
@@ -158,7 +189,7 @@ export function address_graph(selector, query, options) {
           color: '#03a9f4',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
       MarginPositionToken: {
@@ -171,7 +202,7 @@ export function address_graph(selector, query, options) {
           color: '#ff5722',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
       coinbase: {
@@ -184,7 +215,7 @@ export function address_graph(selector, query, options) {
           color: '#03a9f4',
         },
         font: {
-          color: '#ffffff',
+          color: this.theme == 'dark' ? 'white' : 'black',
         },
       },
     },
@@ -308,14 +339,17 @@ export function address_graph(selector, query, options) {
           to: edge.receiver.address,
           arrows: 'to',
           label: label,
-          color: { color: 'silver', highlight: '#ff5722' },
+          color: {
+            color: this.theme == 'dark' ? 'silver' : 'grey',
+            highlight: '#ff5722',
+          },
           font: {
             align: 'middle',
             multi: true,
-            color: '#ffffff',
+            color: this.theme == 'dark' ? 'white' : 'black',
             size: 8,
             strokeWidth: 2,
-            strokeColor: 'black',
+            strokeColor: this.theme == 'dark' ? 'black' : 'white',
           },
           smooth: true,
           width: width,
@@ -334,14 +368,17 @@ export function address_graph(selector, query, options) {
           to: edge.receiver.address,
           arrows: 'to',
           label: label,
-          color: { color: '#ffffff', highlight: '#ff5722' },
+          color: {
+            color: this.theme == 'dark' ? 'white' : 'black',
+            highlight: '#ff5722',
+          },
           font: {
             align: 'middle',
             multi: true,
-            color: '#ffffff',
+            color: this.theme == 'dark' ? 'white' : 'black',
             size: 8,
             strokeWidth: 2,
-            strokeColor: 'black',
+            strokeColor: this.theme == 'dark' ? 'black' : 'white',
           },
           smooth: true,
           width: width,
@@ -364,99 +401,60 @@ export function address_graph(selector, query, options) {
   }
 
   this.setDataset = () => {
-    if (!this.dataset) {
-      this.dataset = {
-        nodes: new DataSet(
-          _.uniqBy(
-            this.prepareNodes(query.data[0].ethereum.inbound).concat(
-              this.prepareNodes(query.data[0].ethereum.outbound)
-            ),
-            'id'
-          )
-
-          // _.uniqBy(
-          //   _.reduce(
-          //     query.data,
-          //     (sum, d) => {
-          //       return sum.concat(
-          //         this.prepareNodes(d.ethereum.inbound).concat(
-          //           this.prepareNodes(d.ethereum.outbound)
-          //         )
-          //       )
-          //     },
-          //     []
-          //   ),
-          //   'id'
-          // )
-        ),
-        edges: new DataSet(
-          _.uniqBy(
-            this.prepareEdges(query.data[0].ethereum.inbound).concat(
-              this.prepareEdges(query.data[0].ethereum.outbound, false)
-            ),
-            'id'
-          )
-
-          // _.uniqBy(
-          //   _.reduce(
-          //     query.data,
-          //     (sum, d) => {
-          //       return sum.concat(
-          //         this.prepareEdges(d.ethereum.inbound).concat(
-          //           this.prepareEdges(d.ethereum.outbound, false)
-          //         )
-          //       )
-          //     },
-          //     []
-          //   ),
-          //   'id'
-          // )
-        ),
-      }
-    } else {
-      _.each(
+    this.dataset = {
+      nodes: new DataSet(
         _.uniqBy(
-          this.prepareNodes(
-            query.data[query.data.length - 1].ethereum.inbound
-          ).concat(
-            this.prepareNodes(
-              query.data[query.data.length - 1].ethereum.outbound
-            )
+          this.prepareNodes(query.data.ethereum.inbound).concat(
+            this.prepareNodes(query.data.ethereum.outbound)
           ),
           'id'
-        ),
-        (node) => {
-          if (!this.dataset.nodes.get(node.id)) {
-            this.dataset.nodes.add(node)
-          }
-        }
-      )
-      _.each(
+        )
+      ),
+      edges: new DataSet(
         _.uniqBy(
-          this.prepareEdges(
-            query.data[query.data.length - 1].ethereum.inbound
-          ).concat(
-            this.prepareEdges(
-              query.data[query.data.length - 1].ethereum.outbound,
-              false
-            )
+          this.prepareEdges(query.data.ethereum.inbound).concat(
+            this.prepareEdges(query.data.ethereum.outbound, false)
           ),
           'id'
-        ),
-        (edge) => {
-          if (!this.dataset.edges.get(edge.id)) {
-            this.dataset.edges.add(edge)
-          }
-        }
-      )
+        )
+      ),
     }
+  }
+
+  this.expandDataset = () => {
+    _.each(
+      _.uniqBy(
+        this.prepareNodes(query.data.ethereum.inbound).concat(
+          this.prepareNodes(query.data.ethereum.outbound)
+        ),
+        'id'
+      ),
+      (node) => {
+        if (!this.dataset.nodes.get(node.id)) {
+          this.dataset.nodes.add(node)
+        }
+      }
+    )
+    _.each(
+      _.uniqBy(
+        this.prepareEdges(query.data.ethereum.inbound).concat(
+          this.prepareEdges(query.data.ethereum.outbound, false)
+        ),
+        'id'
+      ),
+      (edge) => {
+        if (!this.dataset.edges.get(edge.id)) {
+          this.dataset.edges.add(edge)
+        }
+      }
+    )
   }
 
   this.expand = (address) => {
     const node = this.dataset.nodes.get(address)
     if (!node.expanded) {
-			node.expanded = true
-			const group = node.group
+      node.expanded = true
+      const group = node.group
       const prevColor = this.network.groups.groups[group].icon.color
       node.icon = {
         color: darkenColor(prevColor, 25),
@@ -467,26 +465,13 @@ export function address_graph(selector, query, options) {
   }
 
   this.detailLevel = (limit) => {
-    const container = $(this.container)
-    const graphDetailLevel = $(
-      '<div><span>Detail level</span>' +
-        '<div><i class="fas fa-th-large"></i> <input type="range" min="1" max="100" step="1" value="' +
-        limit +
-        '" title="Detail level"> <i class="fas fa-th"></i></div>' +
-        '</div>'
-    )
-    container.append(graphDetailLevel)
-    graphDetailLevel.css({
-      position: 'absolute',
-      top: '20px',
-      right: '20px',
-      maxWidth: '60%',
-    })
+    const graphDetailLevel = $(DetailLevel(limit))
+    const val = $(DetailLevelPopup(this.theme))
+
+    jqContainer.append(graphDetailLevel)
+
     graphDetailLevel.find('input').val(query.initVariables.limit)
 
-    const val = $(
-      '<div style="width:40px;height:25px;position:absolute;border:1px solid black; text-align:center"></div>'
-    )
     graphDetailLevel
       .find('input')
       .on('mousedown', function(e) {
@@ -494,8 +479,7 @@ export function address_graph(selector, query, options) {
         val.css({ left: e.pageX - 20, top: e.pageY - 40 })
         val.html($(this).val())
         $(this).on('mousemove', function(e) {
-          let it = $(this)
-          val.css({ left: e.pageX - 20, top: e.pageY - 40 })
+          val.css({ left: e.pageX - 20 })
           val.html($(this).val())
         })
       })
@@ -504,11 +488,57 @@ export function address_graph(selector, query, options) {
         $(this).off('mousemove')
       })
 
-    graphDetailLevel.find('input').on('change', function() {
-      let it = $(this)
+    graphDetailLevel.find('input').on('change', function(e) {
+      const variables = {
+        limit: parseInt($(this).val()),
+      }
+      _.merge(query.initVariables, variables)
+      query.request(variables)
+    })
+  }
+
+  this.currencyFilter = () => {
+    const select = $(CurrencyFilter())
+    _.each(currencies, function(c) {
+      const value = c.address === '-' ? c.symbol : c.address
+      select
+        .find('select')
+        .append(
+          CurrencyFilterOption(
+            value,
+            query.initVariables.currency,
+            c.name,
+            c.symbol
+          )
+        )
+    })
+    jqContainer.append(select)
+
+    select.find('select').on('change', function() {
+      const currencyAddress = $(this).val()
+      currency = (
+        _.find(currencies, { address: currencyAddress }) || currencies[0]
+      ).symbol
+      _.merge(query.initVariables, { currency: currencyAddress })
       query.request({
-        limit: parseInt(it.val()),
+        network: query.initVariables.network,
+        address: query.initVariables.address,
+        currency: currencyAddress,
       })
+    })
+  }
+
+  this.fullScreen = () => {
+    const fullScreenButton = $(
+      FullscreenButton(jqContainer.hasClass('fullscreen'))
+    )
+    jqContainer.append(fullScreenButton)
+
+    fullScreenButton.find('.fullscreen-button__icon').on('click', function() {
+      const icon = $(this)
+      jqContainer.toggleClass('fullscreen')
+      icon.toggleClass('fa-expand')
+      icon.toggleClass('fa-compress')
     })
   }
 
@@ -519,12 +549,17 @@ export function address_graph(selector, query, options) {
       this.container,
       this.dataset,
       this.networkOptions
-		)
-		
-		const rootNode = this.dataset.nodes.get(query.initVariables.address)
-		rootNode.physics = false
-		rootNode.expanded = true
-		this.dataset.nodes.update(rootNode)
+    )
+
+    const rootNode = this.dataset.nodes.get(query.initVariables.address)
+    rootNode.physics = false
+    rootNode.expanded = true
+    const rootNodeGroup = rootNode.group
+    const rootNodePrevColor = this.network.groups.groups[rootNodeGroup].icon.color
+    rootNode.icon = {
+      color: darkenColor(rootNodePrevColor, 25),
+    }
+    this.dataset.nodes.update(rootNode)
 
     this.network.on('dragEnd', (params) => {
       const nodeId = params.nodes[0]
@@ -534,26 +569,21 @@ export function address_graph(selector, query, options) {
     })
 
     this.network.on('doubleClick', (params) => {
-      this.expand(params.nodes[0])
-      // const group = clickedNode.group
-      // const prevColor = this.network.groups.groups[group].icon.color
-      // clickedNode.icon = {
-      //   color: darkenColor(prevColor, 25),
-      // }
-
-      // this.dataset.nodes.update(clickedNode)
-      // for testing
-      // window.clickedNode = clickedNode
+      if (params.nodes.length > 0) {
+        this.expand(params.nodes[0])
+      }
     })
 
     this.detailLevel(query.initVariables.limit)
+    this.currencyFilter()
+    this.fullScreen()
   }
 
-  this.render = () => {
-    if (!this.network) {
+  this.render = (isExpand) => {
+    if (!isExpand) {
       this.initGraph()
     } else {
-      this.setDataset()
+      this.expandDataset()
     }
   }
 

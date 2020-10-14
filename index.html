@@ -17,7 +17,7 @@
     <div class="container-fluid">
       <div class="row">
         <div class="col-12 col-lg-12 mb-4">
-          <div class="card dark text-white">
+          <div class="card">
             <div class="card-header">Graph</div>
             <div class="card-body" style="padding: 0">
               <div id="graph"></div>
@@ -90,14 +90,15 @@
 						}
 					}
 				}
-				`) // определяем query
+				`)
 
         window.graph = new graphs.address_graph('#graph', window.query, {
 					//  title: '<%= t('tabs.address.graph.name') %>',
-					title: 'Title from options'
+					title: 'Title from options',
+					theme: 'dark'
         })
 
-        query.request({"limit": 10, "offset": 0, "network": "ethereum", "address": "0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c", "currency": "ETH", "from": null, "till": null, "dateFormat": "%Y-%m"}) // делаем запрос передавая параметры ( в данном случае даты от и до )
+        query.request({"limit": 10, "offset": 0, "network": "ethereum", "address": "0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c", "currency": "ETH", "from": null, "till": null, "dateFormat": "%Y-%m"})
       })
     </script>
   </body>

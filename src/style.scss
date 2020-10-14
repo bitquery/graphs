@@ -1,15 +1,97 @@
-$fa-font-path: "~@fortawesome/fontawesome-free/webfonts" !default;
-@import "~@fortawesome/fontawesome-free/scss/fontawesome.scss";
-@import "~@fortawesome/fontawesome-free/scss/regular.scss";
-@import "~@fortawesome/fontawesome-free/scss/solid.scss";
+$fa-font-path: '~@fortawesome/fontawesome-free/webfonts' !default;
+@import '~@fortawesome/fontawesome-free/scss/fontawesome.scss';
+@import '~@fortawesome/fontawesome-free/scss/regular.scss';
+@import '~@fortawesome/fontawesome-free/scss/solid.scss';
 // @import "~@fortawesome/fontawesome-free/scss/brands.scss";
 // @import "~@fortawesome/fontawesome-free/scss/v4-shims.scss";
 
 #graph {
-	position: relative;
+  position: relative;
 	height: 600px;
+	background: white;
+	&.fullscreen {
+		position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+	}
 }
 
-.dark {
-	background: #434e57;
+.detail-level {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  max-width: 60%;
+  &__popup {
+    position: absolute;
+    width: 40px;
+    height: 25px;
+    border: 1px solid black;
+    background-color: white;
+    color: black;
+    text-align: center;
+    z-index: 1000;
+    &--dark {
+      background-color: #434e57;
+      color: #d6d6d6;
+    }
+  }
+}
+
+.currency-filter {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+	max-width: 30%;
+  &__select {
+		width: 100%;
+  }
+}
+
+.fullscreen-button {
+	position: absolute;
+	right: 20px;
+	bottom: 20px;
+	color: grey;
+	&__icon {
+		font-size: 25px;
+	}
+}
+
+.card.dark {
+  color: #d6d6d6;
+  background-color: #434e57;
+  border: 1px solid #434e57;
+  .card-header {
+    background-color: #343d46;
+	}
+	#graph {
+		background: #434e57;
+	}
+  .detail-level {
+    &__input,
+    &__input:focus {
+      background-color: #434e57;
+      border-color: #758591;
+      color: #d6d6d6;
+    }
+  }
+  .currency-filter {
+    &__select,
+    &__select:focus {
+      background-color: #434e57;
+      border-color: #758591;
+      color: #d6d6d6;
+    }
+	}
+	.fullscreen-button {
+		color: silver;
+	}
+}
+
+*:focus {
+	outline: none;
 }
