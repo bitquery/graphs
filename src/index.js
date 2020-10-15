@@ -2,6 +2,7 @@
 import _ from 'lodash'
 import _n from 'numeral'
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min'
+import { LineLoader } from './components/LineLoader'
 import { CurrencyFilter } from './components/CurrencyFilter'
 import { CurrencyFilterOption } from './components/CurrencyFilterOption'
 import { DetailLevel } from './components/DetailLevel'
@@ -19,7 +20,7 @@ export function query(query) {
     data: null,
     setData: function(data, isExpand) {
       this.data = data
-
+      this.cryptoCurrency = _.keys(data)[0]
       //notify components
       _.each(this.components, (component) => {
         component.render(isExpand)
@@ -28,28 +29,10 @@ export function query(query) {
     components: [],
 
     request: function(variables, isExpand = false) {
-      // let intervals = {}
-      // _.each(it.components, function(component) {
-      //   let loading =
-      //     '<div style="margin: 10px;">' +
-      //     '<span>Loading...</span>' +
-      //     '<div style="background-color: #eeeeee"><div style="width: 0%; height:4px; background-color: #007bff"></div></div>' +
-      //     '<span style="font-size: 12px;float: left"">0</span><span style="font-size: 12px;float: right">100</span>' +
-      //     '</div>'
-      //   _.each(utils.select(component.selector).elements, function(element) {
-      //     element.innerHTML = loading
-      //     let line = utils.select(component.selector + '>div>div>div')
-      //       .elements[0]
-      //     let i = 1
-      //     intervals[component.selector] = setInterval(function() {
-      //       if (i > Math.floor(Math.random() * 15) + 84) {
-      //         clearInterval(intervals[component.selector])
-      //       }
-      //       line.style.width = i + '%'
-      //       i = i + 1
-      //     }, 40)
-      //   })
-      // })
+      if (!_.isEmpty(this.initVariables)) {
+        this.loading = true
+        this.addLoader()
+      }
 
       fetch('https://graphql.bitquery.io', {
         method: 'POST',
@@ -67,29 +50,46 @@ export function query(query) {
           if (_.isEmpty(this.initVariables)) {
             this.initVariables = variables
           }
-
+          if (this.loading) {
+            this.loading = false
+            this.removeLoader()
+          }
           this.setData(data['data'], isExpand)
         })
+    },
+
+    addLoader: function() {
+      console.log(this)
+      _.each(this.components, (component) => {
+        $(component.container)
+          .parent()
+          .prepend(`<div class="request-loader"></div>`)
+        $(component.container).addClass('loading')
+      })
+    },
+
+    removeLoader: function() {
+      _.each(this.components, (component) => {
+        $('.request-loader').remove()
+        $(component.container).removeClass('loading')
+      })
     },
   }
 }
 
 export function address_graph(selector, query, options) {
-  const currencies = getCurrencies()
-  let currency = (
-    _.find(currencies, { address: query.initVariables.currency }) ||
-    currencies[0]
-  ).symbol
-  // const currency = 'Ether'
+  const g = {}
 
-  this.theme = options.theme || 'light'
+  g.container = document.querySelector(selector)
+  const jqContainer = $(g.container)
+  jqContainer.wrap('<div id="wrapper" class="wrapper">')
+  // a trick for the icons in the graph to be loaded
+  jqContainer.append(
+    '<i class="fa fa-flag" style="visibility:hidden;position:absolute;"></i>'
+  )
+  const jqWrapper = $('#wrapper')
 
-  this.container = document.querySelector(selector)
-  const jqContainer = $(this.container)
-  jqContainer
-    .parents('div')
-    .find('.card-header')
-    .text(options.title || 'Default graph title')
+  g.theme = options.theme || 'light'
 
   if (options.theme == 'dark') {
     jqContainer
@@ -98,7 +98,45 @@ export function address_graph(selector, query, options) {
       .addClass('dark')
   }
 
-  this.networkOptions = {
+  jqContainer
+    .parents('div')
+    .find('.card-header')
+    .text(options.title || 'Default graph title')
+
+  {
+    jqWrapper.addClass('initializing')
+    const loading = $(LineLoader())
+    jqContainer.append(loading)
+    const line = $('.line-loader__line')
+    let i = 1
+    const interval = setInterval(function() {
+      if (i > Math.floor(Math.random() * 15) + 84) {
+        clearInterval(interval)
+      }
+      line.width(i + '%')
+      i = i + 1
+    }, 40)
+  }
+
+  // let currencies = [
+  //   {
+  //     address: '0x87010faf5964d67ed070bc4b8dcafa1e1adc0997',
+  //     symbol: 'FC',
+  //     name: 'FansCoin',
+  //   },
+  // ]
+  // let currency = (
+  //   _.find(currencies, { address: query.initVariables.currency }) ||
+  //   currencies[0]
+  // ).symbol
+  const currencies = getCurrencies()
+  let currency = (
+    _.find(currencies, { address: query.initVariables.currency }) ||
+    currencies[0]
+  ).symbol
+  // const currency = 'Ether'
+
+  g.networkOptions = {
     height: '100%',
     physics: {
       stabilization: {
@@ -123,7 +161,7 @@ export function address_graph(selector, query, options) {
           color: '#f0a30a',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
       multisig: {
@@ -136,7 +174,7 @@ export function address_graph(selector, query, options) {
           color: '#03a9f4',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
       address: {
@@ -146,10 +184,10 @@ export function address_graph(selector, query, options) {
           code: '\uf007',
           weight: 900,
           size: 40,
-          color: this.theme == 'dark' ? '#00dbb7' : '#009688',
+          color: g.theme == 'dark' ? '#00dbb7' : '#009688',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
       annotated_address: {
@@ -159,10 +197,10 @@ export function address_graph(selector, query, options) {
           code: '\uf007',
           weight: 900,
           size: 40,
-          color: this.theme == 'dark' ? '#00967b' : '#006650',
+          color: g.theme == 'dark' ? '#00967b' : '#006650',
         },
         font: {
-          background: this.theme == 'dark' ? '#00967b' : '#006650',
+          background: g.theme == 'dark' ? '#00967b' : '#006650',
           color: '#ffffff',
         },
       },
@@ -176,7 +214,7 @@ export function address_graph(selector, query, options) {
           color: '#ff5722',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
       dex: {
@@ -189,7 +227,7 @@ export function address_graph(selector, query, options) {
           color: '#03a9f4',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
       MarginPositionToken: {
@@ -202,7 +240,7 @@ export function address_graph(selector, query, options) {
           color: '#ff5722',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
       coinbase: {
@@ -215,13 +253,13 @@ export function address_graph(selector, query, options) {
           color: '#03a9f4',
         },
         font: {
-          color: this.theme == 'dark' ? 'white' : 'black',
+          color: g.theme == 'dark' ? 'white' : 'black',
         },
       },
     },
   }
 
-  this.hashCode = (data) => {
+  g.hashCode = (data) => {
     var string = JSON.stringify(data)
     if (Array.prototype.reduce) {
       return string.split('').reduce(function(a, b) {
@@ -239,7 +277,7 @@ export function address_graph(selector, query, options) {
     return hash
   }
 
-  this.prepareNodes = (nodes) => {
+  g.prepareNodes = (nodes) => {
     const prepareNode = (node) => {
       if (node.address == '0x0000000000000000000000000000000000000000') {
         return {
@@ -322,7 +360,7 @@ export function address_graph(selector, query, options) {
     return prepared
   }
 
-  this.prepareEdges = (edges, receiver = true) => {
+  g.prepareEdges = (edges, receiver = true) => {
     const prepareEdge = (edge) => {
       let currency_name = currency
       let width = edge.amount > 1 ? 1.5 * Math.log10(edge.amount) + 1 : 1
@@ -340,22 +378,22 @@ export function address_graph(selector, query, options) {
           arrows: 'to',
           label: label,
           color: {
-            color: this.theme == 'dark' ? 'silver' : 'grey',
+            color: g.theme == 'dark' ? 'silver' : 'grey',
             highlight: '#ff5722',
           },
           font: {
             align: 'middle',
             multi: true,
-            color: this.theme == 'dark' ? 'white' : 'black',
+            color: g.theme == 'dark' ? 'white' : 'black',
             size: 8,
             strokeWidth: 2,
-            strokeColor: this.theme == 'dark' ? 'black' : 'white',
+            strokeColor: g.theme == 'dark' ? 'black' : 'white',
           },
           smooth: true,
           width: width,
           select_type: 'select_transfers',
           hidden: false,
-          id: this.hashCode([
+          id: g.hashCode([
             'select_transfers',
             edge.sender.address,
             edge.receiver.address,
@@ -369,22 +407,22 @@ export function address_graph(selector, query, options) {
           arrows: 'to',
           label: label,
           color: {
-            color: this.theme == 'dark' ? 'white' : 'black',
+            color: g.theme == 'dark' ? 'white' : 'black',
             highlight: '#ff5722',
           },
           font: {
             align: 'middle',
             multi: true,
-            color: this.theme == 'dark' ? 'white' : 'black',
+            color: g.theme == 'dark' ? 'white' : 'black',
             size: 8,
             strokeWidth: 2,
-            strokeColor: this.theme == 'dark' ? 'black' : 'white',
+            strokeColor: g.theme == 'dark' ? 'black' : 'white',
           },
           smooth: true,
           width: width,
           select_type: 'select_transfers',
           hidden: false,
-          id: this.hashCode([
+          id: g.hashCode([
             'select_transfers',
             edge.sender.address,
             edge.receiver.address,
@@ -400,73 +438,101 @@ export function address_graph(selector, query, options) {
     return prepared
   }
 
-  this.setDataset = () => {
-    this.dataset = {
-      nodes: new DataSet(
-        _.uniqBy(
-          this.prepareNodes(query.data.ethereum.inbound).concat(
-            this.prepareNodes(query.data.ethereum.outbound)
-          ),
-          'id'
-        )
-      ),
-      edges: new DataSet(
-        _.uniqBy(
-          this.prepareEdges(query.data.ethereum.inbound).concat(
-            this.prepareEdges(query.data.ethereum.outbound, false)
-          ),
-          'id'
-        )
-      ),
+  g.setDataset = () => {
+    if (!g.dataset) {
+      g.dataset = {
+        nodes: new DataSet(),
+        edges: new DataSet(),
+      }
     }
-  }
-
-  this.expandDataset = () => {
+    g.dataset.nodes.clear()
+    g.dataset.edges.clear()
     _.each(
       _.uniqBy(
-        this.prepareNodes(query.data.ethereum.inbound).concat(
-          this.prepareNodes(query.data.ethereum.outbound)
-        ),
+        g
+          .prepareNodes(query.data[query.cryptoCurrency].inbound)
+          .concat(g.prepareNodes(query.data[query.cryptoCurrency].outbound)),
         'id'
       ),
       (node) => {
-        if (!this.dataset.nodes.get(node.id)) {
-          this.dataset.nodes.add(node)
+        g.dataset.nodes.add(node)
+      }
+    )
+    _.each(
+      _.uniqBy(
+        g
+          .prepareEdges(query.data[query.cryptoCurrency].inbound)
+          .concat(
+            g.prepareEdges(query.data[query.cryptoCurrency].outbound, false)
+          ),
+        'id'
+      ),
+      (edge) => {
+        g.dataset.edges.add(edge)
+      }
+    )
+  }
+
+  g.editRootNode = () => {
+    const rootNode = g.dataset.nodes.get(query.initVariables.address)
+    rootNode.physics = false
+    rootNode.expanded = true
+    const rootNodeGroup = rootNode.group
+    const rootNodePrevColor = g.network.groups.groups[rootNodeGroup].icon.color
+    rootNode.icon = {
+      color: darkenColor(rootNodePrevColor, 25),
+    }
+    g.dataset.nodes.update(rootNode)
+  }
+
+  g.expandDataset = () => {
+    _.each(
+      _.uniqBy(
+        g
+          .prepareNodes(query.data[query.cryptoCurrency].inbound)
+          .concat(g.prepareNodes(query.data[query.cryptoCurrency].outbound)),
+        'id'
+      ),
+      (node) => {
+        if (!g.dataset.nodes.get(node.id)) {
+          g.dataset.nodes.add(node)
         }
       }
     )
     _.each(
       _.uniqBy(
-        this.prepareEdges(query.data.ethereum.inbound).concat(
-          this.prepareEdges(query.data.ethereum.outbound, false)
-        ),
+        g
+          .prepareEdges(query.data[query.cryptoCurrency].inbound)
+          .concat(
+            g.prepareEdges(query.data[query.cryptoCurrency].outbound, false)
+          ),
         'id'
       ),
       (edge) => {
-        if (!this.dataset.edges.get(edge.id)) {
-          this.dataset.edges.add(edge)
+        if (!g.dataset.edges.get(edge.id)) {
+          g.dataset.edges.add(edge)
         }
       }
     )
   }
 
-  this.expand = (address) => {
-    const node = this.dataset.nodes.get(address)
+  g.expand = (address) => {
+    const node = g.dataset.nodes.get(address)
     if (!node.expanded) {
       node.expanded = true
       const group = node.group
-      const prevColor = this.network.groups.groups[group].icon.color
+      const prevColor = g.network.groups.groups[group].icon.color
       node.icon = {
         color: darkenColor(prevColor, 25),
       }
-      this.dataset.nodes.update(node)
+      g.dataset.nodes.update(node)
       query.request({ address: address }, true)
     }
   }
 
-  this.detailLevel = (limit) => {
+  g.detailLevel = (limit) => {
     const graphDetailLevel = $(DetailLevel(limit))
-    const val = $(DetailLevelPopup(this.theme))
+    const val = $(DetailLevelPopup(g.theme))
 
     jqContainer.append(graphDetailLevel)
 
@@ -497,7 +563,7 @@ export function address_graph(selector, query, options) {
     })
   }
 
-  this.currencyFilter = () => {
+  g.currencyFilter = () => {
     const select = $(CurrencyFilter())
     _.each(currencies, function(c) {
       const value = c.address === '-' ? c.symbol : c.address
@@ -528,7 +594,7 @@ export function address_graph(selector, query, options) {
     })
   }
 
-  this.fullScreen = () => {
+  g.fullScreen = () => {
     const fullScreenButton = $(
       FullscreenButton(jqContainer.hasClass('fullscreen'))
     )
@@ -536,56 +602,60 @@ export function address_graph(selector, query, options) {
 
     fullScreenButton.find('.fullscreen-button__icon').on('click', function() {
       const icon = $(this)
-      jqContainer.toggleClass('fullscreen')
+      $('#wrapper').toggleClass('fullscreen')
       icon.toggleClass('fa-expand')
       icon.toggleClass('fa-compress')
     })
   }
 
-  this.initGraph = () => {
-    this.setDataset()
+  g.initGraph = () => {
+    g.setDataset()
 
-    this.network = new Network(
-      this.container,
-      this.dataset,
-      this.networkOptions
-    )
+    g.network = new Network(g.container, g.dataset, g.networkOptions)
 
-    const rootNode = this.dataset.nodes.get(query.initVariables.address)
-    rootNode.physics = false
-    rootNode.expanded = true
-    const rootNodeGroup = rootNode.group
-    const rootNodePrevColor = this.network.groups.groups[rootNodeGroup].icon.color
-    rootNode.icon = {
-      color: darkenColor(rootNodePrevColor, 25),
-    }
-    this.dataset.nodes.update(rootNode)
+    g.editRootNode()
 
-    this.network.on('dragEnd', (params) => {
+    g.network.on('dragEnd', (params) => {
       const nodeId = params.nodes[0]
-      const clickedNode = this.dataset.nodes.get(nodeId)
+      const clickedNode = g.dataset.nodes.get(nodeId)
       clickedNode.physics = false
-      this.dataset.nodes.update(clickedNode)
+      g.dataset.nodes.update(clickedNode)
     })
 
-    this.network.on('doubleClick', (params) => {
+    g.network.on('doubleClick', (params) => {
       if (params.nodes.length > 0) {
-        this.expand(params.nodes[0])
+        g.expand(params.nodes[0])
       }
     })
 
-    this.detailLevel(query.initVariables.limit)
-    this.currencyFilter()
-    this.fullScreen()
+    g.network.once('stabilized', function() {
+			g.network.fit({animation: { duration: 500, easingFunction: 'easeInOutQuart' }})
+      // if (g.network.getScale() > 1) {
+      //   const scaleOption = {
+      //     scale: 1,
+      //     animation: { duration: 500, easingFunction: 'easeInOutQuart' },
+      //   }
+      //   g.network.moveTo(scaleOption)
+      // }
+    })
+
+    g.detailLevel(query.initVariables.limit)
+    g.currencyFilter()
+    g.fullScreen()
+    jqWrapper.removeClass('initializing')
   }
 
-  this.render = (isExpand) => {
-    if (!isExpand) {
-      this.initGraph()
+  g.render = (isExpand) => {
+    if (!g.dataset) {
+      g.initGraph()
+    } else if (!isExpand) {
+      g.setDataset()
+      g.editRootNode()
     } else {
-      this.expandDataset()
+      g.expandDataset()
     }
   }
 
-  query.components.push(this)
+  query.components.push(g)
+  return g
 }
