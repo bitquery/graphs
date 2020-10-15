@@ -609,6 +609,7 @@ export function address_graph(selector, query, options) {
   }
 
   g.initGraph = () => {
+    jqWrapper.removeClass('initializing')
     g.setDataset()
 
     g.network = new Network(g.container, g.dataset, g.networkOptions)
@@ -642,7 +643,6 @@ export function address_graph(selector, query, options) {
     g.detailLevel(query.initVariables.limit)
     g.currencyFilter()
     g.fullScreen()
-    jqWrapper.removeClass('initializing')
   }
 
   g.render = (isExpand) => {
