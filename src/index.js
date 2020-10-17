@@ -1,4 +1,3 @@
-// import $ from 'jquery'
 import _ from 'lodash'
 import _n from 'numeral'
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min'
@@ -8,14 +7,13 @@ import { CurrencyFilterOption } from './components/CurrencyFilterOption'
 import { DetailLevel } from './components/DetailLevel'
 import { DetailLevelPopup } from './components/DetailLevelPopup'
 import { FullscreenButton } from './components/FullscreenButton'
-import { getCurrencies } from './currencies'
 import { darkenColor } from './darkenColor'
 import './style.scss'
 
 export function query(query) {
   return {
     query,
-    initVariables: {},
+    variables: {},
 
     data: null,
     setData: function(data, isExpand) {
@@ -28,8 +26,8 @@ export function query(query) {
     },
     components: [],
 
-    request: function(variables, isExpand = false) {
-      if (!_.isEmpty(this.initVariables)) {
+    request: function(variables, isExpand = false, refresh = true) {
+      if (!_.isEmpty(this.variables)) {
         this.loading = true
         this.addLoader()
       }
@@ -42,14 +40,16 @@ export function query(query) {
         },
         body: JSON.stringify({
           query: this.query,
-          variables: _.defaults(variables, this.initVariables),
+          variables: _.defaults(variables, this.variables),
         }),
       })
         .then((r) => r.json())
         .then((data) => {
-          if (_.isEmpty(this.initVariables)) {
-            this.initVariables = variables
-          }
+          if (_.isEmpty(this.variables)) {
+            this.variables = variables
+					}
+					
+					if (refresh) _.merge(this.variables, variables)
           if (this.loading) {
             this.loading = false
             this.removeLoader()
@@ -59,7 +59,6 @@ export function query(query) {
     },
 
     addLoader: function() {
-      console.log(this)
       _.each(this.components, (component) => {
         $(component.container)
           .parent()
@@ -118,24 +117,49 @@ export function address_graph(selector, query, options) {
     }, 40)
   }
 
-  // let currencies = [
-  //   {
-  //     address: '0x87010faf5964d67ed070bc4b8dcafa1e1adc0997',
-  //     symbol: 'FC',
-  //     name: 'FansCoin',
-  //   },
-  // ]
-  // let currency = (
-  //   _.find(currencies, { address: query.initVariables.currency }) ||
-  //   currencies[0]
-  // ).symbol
-  const currencies = getCurrencies()
-  let currency = (
-    _.find(currencies, { address: query.initVariables.currency }) ||
-    currencies[0]
-  ).symbol
-  // const currency = 'Ether'
-
+  g.setCurrency = () => {
+    if (options.currency) {
+			// Bitcoin
+			g.currencies = []
+      g.currency = options.currency
+    } else if (options.currencies.length > 0) {
+			g.currencies = options.currencies
+      if (options.network == 'algorand') {
+        g.currency = (
+          _.find(g.currencies, { token_id: query.variables.currency + '' }) ||
+          g.currencies[0] || { symbol: query.variables }
+        ).symbol
+      } else if (
+        options.network == 'bsc' ||
+        options.network == 'bsc_testnet' ||
+        options.network == 'binance'
+      ) {
+        // Binance
+        g.currency = (
+          _.find(g.currencies, { token_id: query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      } else if (options.network == 'eos') {
+        g.currency = (
+          _.find(g.currencies, { address: query.variables.currency }) ||
+          g.currencies[0]
+        ).address
+      } else if (options.network == 'tron') {
+        g.currency = (
+          _.find(g.currencies, { token_id: query.variables.currency }) ||
+          _.find(g.currencies, { address: query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      } else {
+        // Conflux, Ethereum, Libra
+        g.currency = (
+          _.find(g.currencies, { address: query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      }
+    }
+	}
+	
   g.networkOptions = {
     height: '100%',
     physics: {
@@ -279,7 +303,25 @@ export function address_graph(selector, query, options) {
 
   g.prepareNodes = (nodes) => {
     const prepareNode = (node) => {
-      if (node.address == '0x0000000000000000000000000000000000000000') {
+      if (!node.smartContract) {
+        if (node.address == '') {
+          return {
+            id: node.address,
+            label: 'Coinbase',
+            group: 'coinbase',
+            title: node.address,
+          }
+        } else {
+          return {
+            id: node.address,
+            label:
+              node.annotation ||
+              _.truncate(node.address, { length: 15, separator: '...' }),
+            group: node.annotation ? 'annotated_address' : 'address',
+            title: node.address,
+          }
+        }
+      } else if (node.address == '0x0000000000000000000000000000000000000000') {
         return {
           id: node.address,
           label: 'Coinbase',
@@ -362,7 +404,7 @@ export function address_graph(selector, query, options) {
 
   g.prepareEdges = (edges, receiver = true) => {
     const prepareEdge = (edge) => {
-      let currency_name = currency
+      let currency_name = g.currency
       let width = edge.amount > 1 ? 1.5 * Math.log10(edge.amount) + 1 : 1
       let value =
         parseFloat(edge.amount) <= 1e-6
@@ -474,7 +516,8 @@ export function address_graph(selector, query, options) {
   }
 
   g.editRootNode = () => {
-    const rootNode = g.dataset.nodes.get(query.initVariables.address)
+    if (g.dataset.nodes.length == 0) return
+    const rootNode = g.dataset.nodes.get(query.variables.address)
     rootNode.physics = false
     rootNode.expanded = true
     const rootNodeGroup = rootNode.group
@@ -526,7 +569,7 @@ export function address_graph(selector, query, options) {
         color: darkenColor(prevColor, 25),
       }
       g.dataset.nodes.update(node)
-      query.request({ address: address }, true)
+      query.request({ address: address }, true, false)
     }
   }
 
@@ -536,7 +579,7 @@ export function address_graph(selector, query, options) {
 
     jqContainer.append(graphDetailLevel)
 
-    graphDetailLevel.find('input').val(query.initVariables.limit)
+    graphDetailLevel.find('input').val(query.variables.limit)
 
     graphDetailLevel
       .find('input')
@@ -558,21 +601,46 @@ export function address_graph(selector, query, options) {
       const variables = {
         limit: parseInt($(this).val()),
       }
-      _.merge(query.initVariables, variables)
+      // _.merge(query.variables, variables)
       query.request(variables)
     })
   }
 
   g.currencyFilter = () => {
+    if (g.currencies.length == 0) return
     const select = $(CurrencyFilter())
-    _.each(currencies, function(c) {
-      const value = c.address === '-' ? c.symbol : c.address
+    _.each(g.currencies, function(c) {
+      let value
+      if (options.network == 'algorand') {
+        value = c.token_id
+      } else if (
+        options.network == 'bsc' ||
+        options.network == 'bsc_testnet' ||
+        options.network == 'binance'
+      ) {
+				// Binance
+				// value = c.token_id === '-' ? c.symbol : c.token_id
+        value = c.address === '-' ? c.symbol : c.token_id
+      } else if (options.network == 'eos') {
+        value = c.address
+      } else if (options.network == 'tron') {
+        if (c.token_id == '0' && c.address == '-') {
+          value = c.symbol
+        } else if (c.token_id == '0') {
+          value = c.address
+        } else {
+          value = c.token_id
+        }
+      } else {
+        // Conflux, Ethereum, Libra
+        value = c.address === '-' ? c.symbol : c.address
+      }
       select
         .find('select')
         .append(
           CurrencyFilterOption(
             value,
-            query.initVariables.currency,
+            query.variables.currency,
             c.name,
             c.symbol
           )
@@ -581,18 +649,26 @@ export function address_graph(selector, query, options) {
     jqContainer.append(select)
 
     select.find('select').on('change', function() {
-      const currencyAddress = $(this).val()
-      currency = (
-        _.find(currencies, { address: currencyAddress }) || currencies[0]
+      let currencyAddress = $(this).val()
+      if (options.network && options.network.toLowerCase() == 'algorand') {
+        currencyAddress = parseInt(currencyAddress)
+      }
+      g.currency = (
+        _.find(g.currencies, { address: currencyAddress }) || g.currencies[0]
       ).symbol
-      _.merge(query.initVariables, { currency: currencyAddress })
+      // _.merge(query.variables, { currency: currencyAddress })
       query.request({
-        network: query.initVariables.network,
-        address: query.initVariables.address,
-        currency: currencyAddress,
+        network: query.variables.network,
+				address: query.variables.address,
+				currency: currencyAddress,
       })
     })
-  }
+	}
+	
+	g.refreshCurrencyFilter = () => {
+		jqContainer.find('.currency-filter').remove()
+		g.currencyFilter()
+	}
 
   g.fullScreen = () => {
     const fullScreenButton = $(
@@ -609,7 +685,8 @@ export function address_graph(selector, query, options) {
   }
 
   g.initGraph = () => {
-    jqWrapper.removeClass('initializing')
+		jqWrapper.removeClass('initializing')
+		g.setCurrency()
     g.setDataset()
 
     g.network = new Network(g.container, g.dataset, g.networkOptions)
@@ -629,26 +706,22 @@ export function address_graph(selector, query, options) {
       }
     })
 
-    g.network.once('stabilized', function() {
-			g.network.fit({animation: { duration: 500, easingFunction: 'easeInOutQuart' }})
-      // if (g.network.getScale() > 1) {
-      //   const scaleOption = {
-      //     scale: 1,
-      //     animation: { duration: 500, easingFunction: 'easeInOutQuart' },
-      //   }
-      //   g.network.moveTo(scaleOption)
-      // }
-    })
+    // g.network.once('stabilized', function() {
+    // 	g.network.fit({animation: { duration: 500, easingFunction: 'easeInOutQuart' }})
+    // })
 
-    g.detailLevel(query.initVariables.limit)
+    g.detailLevel(query.variables.limit)
     g.currencyFilter()
     g.fullScreen()
   }
 
   g.render = (isExpand) => {
+    // plug if graph is empty
+    // if (query.data[_.keys(query.data)[0]].inbound.length == 0 && query.data[_.keys(query.data)[0]].outbound.length == 0) return
     if (!g.dataset) {
       g.initGraph()
     } else if (!isExpand) {
+			g.refreshCurrencyFilter()
       g.setDataset()
       g.editRootNode()
     } else {
