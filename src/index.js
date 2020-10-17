@@ -280,7 +280,9 @@ export function address_graph(selector, query, options) {
           g.currencies[0]
         ).symbol
       }
-    }
+    } else {
+			g.currencies = []
+		}
 	}
 
   g.hashCode = (data) => {
