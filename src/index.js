@@ -116,49 +116,6 @@ export function address_graph(selector, query, options) {
       i = i + 1
     }, 40)
   }
-
-  g.setCurrency = () => {
-    if (options.currency) {
-			// Bitcoin
-			g.currencies = []
-      g.currency = options.currency
-    } else if (options.currencies.length > 0) {
-			g.currencies = options.currencies
-      if (options.network == 'algorand') {
-        g.currency = (
-          _.find(g.currencies, { token_id: query.variables.currency + '' }) ||
-          g.currencies[0] || { symbol: query.variables }
-        ).symbol
-      } else if (
-        options.network == 'bsc' ||
-        options.network == 'bsc_testnet' ||
-        options.network == 'binance'
-      ) {
-        // Binance
-        g.currency = (
-          _.find(g.currencies, { token_id: query.variables.currency }) ||
-          g.currencies[0]
-        ).symbol
-      } else if (options.network == 'eos') {
-        g.currency = (
-          _.find(g.currencies, { address: query.variables.currency }) ||
-          g.currencies[0]
-        ).address
-      } else if (options.network == 'tron') {
-        g.currency = (
-          _.find(g.currencies, { token_id: query.variables.currency }) ||
-          _.find(g.currencies, { address: query.variables.currency }) ||
-          g.currencies[0]
-        ).symbol
-      } else {
-        // Conflux, Ethereum, Libra
-        g.currency = (
-          _.find(g.currencies, { address: query.variables.currency }) ||
-          g.currencies[0]
-        ).symbol
-      }
-    }
-	}
 	
   g.networkOptions = {
     height: '100%',
@@ -282,6 +239,49 @@ export function address_graph(selector, query, options) {
       },
     },
   }
+
+  g.setCurrency = (value) => {
+    if (options.currency) {
+			// Bitcoin
+			g.currencies = []
+      g.currency = options.currency
+    } else if (options.currencies.length > 0) {
+			g.currencies = options.currencies
+      if (options.network == 'algorand') {
+        g.currency = (
+          _.find(g.currencies, { token_id: value || query.variables.currency + '' }) ||
+          g.currencies[0] || { symbol: value || query.variables.currency }
+        ).symbol
+      } else if (
+        options.network == 'bsc' ||
+        options.network == 'bsc_testnet' ||
+        options.network == 'binance'
+      ) {
+        // Binance
+        g.currency = (
+          _.find(g.currencies, { token_id: value || query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      } else if (options.network == 'eos') {
+        g.currency = (
+          _.find(g.currencies, { address: value || query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      } else if (options.network == 'tron') {
+        g.currency = (
+          _.find(g.currencies, { token_id: value || query.variables.currency }) ||
+          _.find(g.currencies, { address: value || query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      } else {
+        // Conflux, Ethereum, Libra
+        g.currency = (
+          _.find(g.currencies, { address: value || query.variables.currency }) ||
+          g.currencies[0]
+        ).symbol
+      }
+    }
+	}
 
   g.hashCode = (data) => {
     var string = JSON.stringify(data)
@@ -650,13 +650,11 @@ export function address_graph(selector, query, options) {
 
     select.find('select').on('change', function() {
       let currencyAddress = $(this).val()
+			g.setCurrency(currencyAddress)
       if (options.network && options.network.toLowerCase() == 'algorand') {
         currencyAddress = parseInt(currencyAddress)
       }
-      g.currency = (
-        _.find(g.currencies, { address: currencyAddress }) || g.currencies[0]
-      ).symbol
-      // _.merge(query.variables, { currency: currencyAddress })
+
       query.request({
         network: query.variables.network,
 				address: query.variables.address,
@@ -722,6 +720,7 @@ export function address_graph(selector, query, options) {
       g.initGraph()
     } else if (!isExpand) {
 			g.refreshCurrencyFilter()
+			g.setCurrency()
       g.setDataset()
       g.editRootNode()
     } else {
