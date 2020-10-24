@@ -1,47 +1,40 @@
-$fa-font-path: '~@fortawesome/fontawesome-free/webfonts' !default;
-@import '~@fortawesome/fontawesome-free/scss/fontawesome.scss';
-@import '~@fortawesome/fontawesome-free/scss/regular.scss';
-@import '~@fortawesome/fontawesome-free/scss/solid.scss';
-// @import "~@fortawesome/fontawesome-free/scss/brands.scss";
-// @import "~@fortawesome/fontawesome-free/scss/v4-shims.scss";
-
 .card-header {
-	z-index: 1010;
+  z-index: 1010;
 }
 
 #wrapper {
-	position: relative;
-	width: 100%;
-	height: 600px;
-	background: white;
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: white;
   &.initializing {
     height: auto;
   }
-	&.fullscreen {
+  &.fullscreen {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     width: 100%;
-		height: 100%;
-		z-index: 1015;
-	}
+    height: 100%;
+    z-index: 1015;
+  }
 }
 
 #graph {
   position: relative;
-	width: 100%;
-	height: 100%;
-	background: white;
-	&.loading {
-		filter: blur(5px);
-	}
+  width: 100%;
+  height: 100%;
+  background: white;
+  &.loading {
+    filter: blur(5px);
+  }
 }
-canvas {
-	width: 100%;
-	height: 100%;
-}
+// canvas {
+// 	width: 100%;
+// 	height: 100%;
+// }
 
 .request-loader {
   background: rgba(255, 255, 255, 0.3);
@@ -50,8 +43,8 @@ canvas {
   left: 0;
   right: 0;
   width: 100%;
-	height: 100%;
-	z-index: 1005;
+  height: 100%;
+  z-index: 1005;
   &::after {
     content: '';
     border-radius: 50%;
@@ -67,8 +60,8 @@ canvas {
     border-bottom: 4px solid #17a2b8;
     border-left: 4px solid rgba(255, 255, 255, 0);
     transform: translate(-50%, -50%);
-		animation: load8 1.1s infinite linear;
-		z-index: 1010;
+    animation: load8 1.1s infinite linear;
+    z-index: 1010;
   }
 }
 
@@ -137,9 +130,9 @@ canvas {
 }
 
 .fullscreen-button {
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
+  // position: absolute;
+  // right: 20px;
+  // bottom: 20px;
   color: grey;
   &__icon {
     font-size: 25px;
@@ -147,17 +140,19 @@ canvas {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 .card.dark {
   color: #d6d6d6;
   background-color: #434e57;
   border: 1px solid #434e57;
   .card-header {
-		background-color: #343d46;
-		border-bottom-color: #343d46;
-	}
-	#wrapper {
-		background: #434e57;
-	}
+    background-color: #343d46;
+    border-bottom-color: #343d46;
+  }
+  #wrapper {
+    background: #434e57;
+  }
   #graph {
     background: #434e57;
   }
@@ -187,4 +182,169 @@ canvas {
 
 *:focus {
   outline: none;
+}
+
+////////////////
+
+.graph-modal-open {
+  overflow: hidden;
+}
+.graph-bottom-menu {
+	display: flex;
+	flex-flow: column;
+	align-items: flex-end;
+	position: absolute;
+  right: 20px;
+	bottom: 20px;
+	&__buttons {
+		display: flex;
+		margin-top: 5px;
+		a.badge {
+			color: #fff;
+			font-size: 60%;
+			cursor: pointer;
+		
+			display: inline-block;
+			padding: 0.25em 0.4em;
+			line-height: 1;
+			text-align: center;
+			white-space: nowrap;
+			vertical-align: baseline;
+		
+			&.badge-secondary {
+				background-color: #6c757d;
+			}
+		
+			&:hover {
+				color: #fff;
+			}
+		}
+	}
+}
+.graph-modal {
+  display: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.2);
+	.graph-modal-dialog {
+    position: relative;
+    margin: 30px auto;
+
+    @media screen and (min-width: 992px) {
+      width: 80%;
+    }
+
+    @media screen and (min-width: 768px) and (max-width: 991px) {
+      width: 90%;
+    }
+
+    .graph-modal-content {
+      background-color: #fff;
+      box-shadow: 0 27px 24px 0 rgba(0, 0, 0, 0.2),
+        0 40px 77px 0 rgba(0, 0, 0, 0.22);
+      border-radius: 2px;
+      border: none;
+
+      .graph-modal-header {
+        border-bottom: none;
+        padding-top: 24px;
+        padding-right: 24px;
+        padding-bottom: 10px;
+        padding-left: 24px;
+
+        .graph-modal-title {
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        button.graph-modal-close {
+          padding: 0;
+          cursor: pointer;
+          background: transparent;
+          border: 0;
+          margin-top: -2px;
+          -webkit-appearance: none;
+          float: right;
+          font-size: 21px;
+          font-weight: bold;
+          line-height: 1;
+          color: #000;
+          text-shadow: 0 1px 0 #fff;
+          opacity: 0.2;
+        }
+      }
+
+      .graph-modal-body {
+        padding-top: 0px;
+        padding-right: 24px;
+        padding-bottom: 16px;
+        padding-left: 24px;
+        height: 600px;
+        textarea {
+          width: 100%;
+          height: 100%;
+					resize: none;
+					border-color: #6c757d;
+        }
+      }
+
+      .graph-modal-url {
+        padding-top: 0px;
+        padding-right: 24px;
+        padding-bottom: 16px;
+        padding-left: 24px;
+
+        input {
+          width: 100%;
+        }
+      }
+
+      .graph-modal-footer {
+        padding-top: 0px;
+        padding-right: 24px;
+        padding-bottom: 16px;
+				padding-left: 24px;
+				.btn.btn-default {
+					border: 1px solid #6c757d;
+				}
+      }
+    }
+  }
+  &.dark {
+    .graph-modal-dialog {
+      .graph-modal-content {
+        background-color: #343a40;
+        .graph-modal-header {
+          button.graph-modal-close {
+            color: #fff;
+            text-shadow: 0 1px 0 #000;
+          }
+        }
+        .graph-modal-body {
+          color: #fff;
+          textarea {
+            background-color: #627079;
+						color: #fff;
+						border-color: #6c757d;
+          }
+        }
+        .graph-modal-footer {
+          .btn.btn-default {
+            background-color: #212529;
+						color: #fff;
+						border: none;
+          }
+        }
+      }
+    }
+  }
+  &.graph-modal-shown {
+    display: block;
+  }
 }

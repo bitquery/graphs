@@ -1,13 +1,15 @@
 import _ from 'lodash'
 import _n from 'numeral'
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min'
+// import { Network, DataSet } from '../node_modules/vis'
 import { LineLoader } from './components/LineLoader'
 import { CurrencyFilter } from './components/CurrencyFilter'
 import { CurrencyFilterOption } from './components/CurrencyFilterOption'
 import { DetailLevel } from './components/DetailLevel'
 import { DetailLevelPopup } from './components/DetailLevelPopup'
-import { FullscreenButton } from './components/FullscreenButton'
-import { darkenColor } from './darkenColor'
+import { addFullScreenButton } from './addFullScreenButton'
+import { lightenOrDarkenColor } from './lightenOrDarkenColor'
+import { addModalJS } from './addModalJS'
 import './style.scss'
 
 export function query(query) {
@@ -19,7 +21,7 @@ export function query(query) {
     setData: function(data, isExpand) {
       this.data = data
       this.cryptoCurrency = _.keys(data)[0]
-      //notify components
+
       _.each(this.components, (component) => {
         component.render(isExpand)
       })
@@ -47,9 +49,9 @@ export function query(query) {
         .then((data) => {
           if (_.isEmpty(this.variables)) {
             this.variables = variables
-					}
-					
-					if (refresh) _.merge(this.variables, variables)
+          }
+
+          if (refresh) _.merge(this.variables, variables)
           if (this.loading) {
             this.loading = false
             this.removeLoader()
@@ -80,7 +82,10 @@ export function address_graph(selector, query, options) {
   const g = {}
 
   g.container = document.querySelector(selector)
-  const jqContainer = $(g.container)
+	const jqContainer = $(g.container)
+	
+	g.JSCode = jqContainer.parents('.row')[0].outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`)
+
   jqContainer.wrap('<div id="wrapper" class="wrapper">')
   // a trick for the icons in the graph to be loaded
   jqContainer.append(
@@ -116,7 +121,7 @@ export function address_graph(selector, query, options) {
       i = i + 1
     }, 40)
   }
-	
+
   g.networkOptions = {
     height: '100%',
     physics: {
@@ -131,125 +136,20 @@ export function address_graph(selector, query, options) {
         springConstant: 0.09,
       },
     },
-    groups: {
-      smart_contract: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf013',
-          weight: 900,
-          size: 40,
-          color: '#f0a30a',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-      multisig: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf4d3',
-          weight: 900,
-          size: 40,
-          color: '#03a9f4',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-      address: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf007',
-          weight: 900,
-          size: 40,
-          color: g.theme == 'dark' ? '#00dbb7' : '#009688',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-      annotated_address: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf007',
-          weight: 900,
-          size: 40,
-          color: g.theme == 'dark' ? '#00967b' : '#006650',
-        },
-        font: {
-          background: g.theme == 'dark' ? '#00967b' : '#006650',
-          color: '#ffffff',
-        },
-      },
-      token: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf51f',
-          weight: 900,
-          size: 40,
-          color: '#ff5722',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-      dex: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf021',
-          weight: 900,
-          size: 40,
-          color: '#03a9f4',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-      MarginPositionToken: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf1b2',
-          weight: 900,
-          size: 40,
-          color: '#ff5722',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-      coinbase: {
-        shape: 'icon',
-        icon: {
-          face: '"Font Awesome 5 Free"',
-          code: '\uf0ac',
-          weight: 900,
-          size: 40,
-          color: '#03a9f4',
-        },
-        font: {
-          color: g.theme == 'dark' ? 'white' : 'black',
-        },
-      },
-    },
   }
 
   g.setCurrency = (value) => {
     if (options.currency) {
-			// Bitcoin
-			g.currencies = []
+      // Bitcoin
+      g.currencies = []
       g.currency = options.currency
     } else if (options.currencies.length > 0) {
-			g.currencies = options.currencies
+      g.currencies = options.currencies
       if (options.network == 'algorand') {
         g.currency = (
-          _.find(g.currencies, { token_id: value || query.variables.currency + '' }) ||
+          _.find(g.currencies, {
+            token_id: value || query.variables.currency + '',
+          }) ||
           g.currencies[0] || { symbol: value || query.variables.currency }
         ).symbol
       } else if (
@@ -259,31 +159,38 @@ export function address_graph(selector, query, options) {
       ) {
         // Binance
         g.currency = (
-          _.find(g.currencies, { token_id: value || query.variables.currency }) ||
-          g.currencies[0]
+          _.find(g.currencies, {
+            token_id: value || query.variables.currency,
+          }) || g.currencies[0]
         ).symbol
       } else if (options.network == 'eos') {
         g.currency = (
-          _.find(g.currencies, { address: value || query.variables.currency }) ||
-          g.currencies[0]
+          _.find(g.currencies, {
+            address: value || query.variables.currency,
+          }) || g.currencies[0]
         ).symbol
       } else if (options.network == 'tron') {
         g.currency = (
-          _.find(g.currencies, { token_id: value || query.variables.currency }) ||
-          _.find(g.currencies, { address: value || query.variables.currency }) ||
+          _.find(g.currencies, {
+            token_id: value || query.variables.currency,
+          }) ||
+          _.find(g.currencies, {
+            address: value || query.variables.currency,
+          }) ||
           g.currencies[0]
         ).symbol
       } else {
         // Conflux, Ethereum, Libra
         g.currency = (
-          _.find(g.currencies, { address: value || query.variables.currency }) ||
-          g.currencies[0]
+          _.find(g.currencies, {
+            address: value || query.variables.currency,
+          }) || g.currencies[0]
         ).symbol
       }
     } else {
-			g.currencies = []
-		}
-	}
+      g.currencies = []
+    }
+  }
 
   g.hashCode = (data) => {
     var string = JSON.stringify(data)
@@ -305,42 +212,51 @@ export function address_graph(selector, query, options) {
 
   g.prepareNodes = (nodes) => {
     const prepareNode = (node) => {
-      if (!node.smartContract) {
-        if (node.address == '') {
-          return {
-            id: node.address,
-            label: 'Coinbase',
-            group: 'coinbase',
-            title: node.address,
-          }
-        } else {
-          return {
-            id: node.address,
-            label:
-              node.annotation ||
-              _.truncate(node.address, { length: 15, separator: '...' }),
-            group: node.annotation ? 'annotated_address' : 'address',
-            title: node.address,
-          }
-        }
-      } else if (node.address == '0x0000000000000000000000000000000000000000') {
+      if (node.address == '0x0000000000000000000000000000000000000000') {
+        // 'coinbase'
         return {
           id: node.address,
           label: 'Coinbase',
-          group: 'coinbase',
           title: node.address,
+          shape: 'icon',
+          icon: {
+            face: 'FontAwesome',
+            code: '\uf0ac',
+            weight: 900,
+            size: 40,
+            color: '#03a9f4',
+          },
+          font: {
+            color: g.theme == 'dark' ? 'white' : 'black',
+          },
         }
-      } else if (node.smartContract.contractType == 'Generic') {
+      } else if (
+        node.smartContract &&
+        node.smartContract.contractType == 'Generic'
+      ) {
+        // 'smart_contract'
         return {
           id: node.address,
           label: _.truncate(node.address, { length: 15, separator: '...' }),
-          group: 'smart_contract',
           title: 'Smart Contract ' + node.address,
+          shape: 'icon',
+          icon: {
+            face: 'FontAwesome',
+            code: '\uf013',
+            weight: 900,
+            size: 40,
+            color: '#f0a30a',
+          },
+          font: {
+            color: g.theme == 'dark' ? 'white' : 'black',
+          },
         }
       } else if (
-        node.smartContract.contractType == 'Token' ||
-        node.smartContract.contractType == 'TokenSale'
+        node.smartContract &&
+        (node.smartContract.contractType == 'Token' ||
+          node.smartContract.contractType == 'TokenSale')
       ) {
+        // 'token'
         return {
           id: node.address,
           label:
@@ -348,7 +264,6 @@ export function address_graph(selector, query, options) {
             ' (' +
             node.smartContract.currency.symbol +
             ')',
-          group: 'token',
           title:
             node.smartContract.currency.name +
             ' (' +
@@ -356,42 +271,143 @@ export function address_graph(selector, query, options) {
             ')' +
             ' ' +
             node.address,
+          shape: 'icon',
+          icon: {
+            face: 'FontAwesome',
+            code: '\uf51f',
+            weight: 900,
+            size: 40,
+            color: '#ff5722',
+          },
+          font: {
+            color: g.theme == 'dark' ? 'white' : 'black',
+          },
         }
-      } else if (node.smartContract.contractType == 'MarginPositionToken') {
+      } else if (
+        node.smartContract &&
+        node.smartContract.contractType == 'MarginPositionToken'
+      ) {
+        // 'MarginPositionToken'
         return {
           id: node.address,
           label:
             node.annotation ||
             _.truncate(node.address, { length: 15, separator: '...' }),
-          group: 'MarginPositionToken',
           title: 'MarginPositionToken ' + node.address,
+          shape: 'icon',
+          icon: {
+            face: 'FontAwesome',
+            code: '\uf1b2',
+            weight: 900,
+            size: 40,
+            color: '#ff5722',
+          },
+          font: {
+            color: g.theme == 'dark' ? 'white' : 'black',
+          },
         }
-      } else if (node.smartContract.contractType == 'Multisig') {
+      } else if (
+        node.smartContract &&
+        node.smartContract.contractType == 'Multisig'
+      ) {
         return {
+          // 'multisig'
           id: node.address,
           label:
             node.annotation ||
             _.truncate(node.address, { length: 15, separator: '...' }),
-          group: 'multisig',
           title: 'MultiSig Wallet ' + node.address,
+          shape: 'icon',
+          icon: {
+            face: 'FontAwesome',
+            code: '\uf4d3',
+            weight: 900,
+            size: 40,
+            color: '#03a9f4',
+          },
+          font: {
+            color: g.theme == 'dark' ? 'white' : 'black',
+          },
         }
-      } else if (node.smartContract.contractType == 'DEX') {
+      } else if (
+        node.smartContract &&
+        node.smartContract.contractType == 'DEX'
+      ) {
+        // 'dex'
         return {
           id: node.address,
           label:
             node.annotation ||
             _.truncate(node.address, { length: 15, separator: '...' }),
-          group: 'dex',
           title: 'DEX ' + node.address,
+          shape: 'icon',
+          icon: {
+            face: 'FontAwesome',
+            code: '\uf021',
+            weight: 900,
+            size: 40,
+            color: '#03a9f4',
+          },
+          font: {
+            color: g.theme == 'dark' ? 'white' : 'black',
+          },
         }
       } else {
-        return {
-          id: node.address,
-          label:
-            node.annotation ||
-            _.truncate(node.address, { length: 15, separator: '...' }),
-          group: node.annotation ? 'annotated_address' : 'address',
-          title: node.address,
+        if (node.address == '') {
+          // 'coinbase'
+          return {
+            id: node.address,
+            label: 'Coinbase',
+            title: node.address,
+            shape: 'icon',
+            icon: {
+              face: 'FontAwesome',
+              code: '\uf0ac',
+              weight: 900,
+              size: 40,
+              color: '#03a9f4',
+            },
+            font: {
+              color: g.theme == 'dark' ? 'white' : 'black',
+            },
+          }
+        } else if (node.annotation) {
+          // 'annotated_address'
+          return {
+            id: node.address,
+            label: node.annotation,
+            title: node.address,
+            shape: 'icon',
+            icon: {
+              face: 'FontAwesome',
+              code: '\uf007',
+              weight: 900,
+              size: 40,
+              color: g.theme == 'dark' ? '#00967b' : '#009183',
+            },
+            font: {
+              background: g.theme == 'dark' ? '#00967b' : '#009183',
+              color: '#ffffff',
+            },
+          }
+        } else {
+          // 'address'
+          return {
+            id: node.address,
+            label: _.truncate(node.address, { length: 15, separator: '...' }),
+            title: node.address,
+            shape: 'icon',
+            icon: {
+              face: 'FontAwesome',
+              code: '\uf007',
+              weight: 900,
+              size: 40,
+              color: g.theme == 'dark' ? '#009b77' : '#009688',
+            },
+            font: {
+              color: g.theme == 'dark' ? 'white' : 'black',
+            },
+          }
         }
       }
     }
@@ -429,8 +445,7 @@ export function address_graph(selector, query, options) {
             align: 'middle',
             multi: true,
             color: g.theme == 'dark' ? 'white' : 'black',
-            size: 8,
-            strokeWidth: 2,
+            strokeWidth: 4,
             strokeColor: g.theme == 'dark' ? 'black' : 'white',
           },
           smooth: true,
@@ -458,8 +473,7 @@ export function address_graph(selector, query, options) {
             align: 'middle',
             multi: true,
             color: g.theme == 'dark' ? 'white' : 'black',
-            size: 8,
-            strokeWidth: 2,
+            strokeWidth: 4,
             strokeColor: g.theme == 'dark' ? 'black' : 'white',
           },
           smooth: true,
@@ -517,17 +531,27 @@ export function address_graph(selector, query, options) {
     )
   }
 
-  g.editRootNode = () => {
-    if (g.dataset.nodes.length == 0) return
-    const rootNode = g.dataset.nodes.get(query.variables.address)
-    rootNode.physics = false
-    rootNode.expanded = true
-    const rootNodeGroup = rootNode.group
-    const rootNodePrevColor = g.network.groups.groups[rootNodeGroup].icon.color
-    rootNode.icon = {
-      color: darkenColor(rootNodePrevColor, 25),
+  g.expandNode = (address) => {
+    const node = g.dataset.nodes.get(address)
+    if (!node.expanded) {
+      node.expanded = true
+			const prevColor = node.icon.color
+			node.physics = false
+      node.icon = {
+        color: lightenOrDarkenColor(prevColor, 20, options.theme == 'dark'),
+      }
+      if (options.theme == 'dark') {
+        node.shadow = {
+          enabled: true,
+          color: prevColor,
+          size: 20,
+          x: 0,
+          y: 0,
+        }
+      }
+
+      g.dataset.nodes.update(node)
     }
-    g.dataset.nodes.update(rootNode)
   }
 
   g.expandDataset = () => {
@@ -562,15 +586,9 @@ export function address_graph(selector, query, options) {
   }
 
   g.expand = (address) => {
-    const node = g.dataset.nodes.get(address)
+		const node = g.dataset.nodes.get(address)
     if (!node.expanded) {
-      node.expanded = true
-      const group = node.group
-      const prevColor = g.network.groups.groups[group].icon.color
-      node.icon = {
-        color: darkenColor(prevColor, 25),
-      }
-      g.dataset.nodes.update(node)
+      g.expandNode(address)
       query.request({ address: address }, true, false)
     }
   }
@@ -620,8 +638,8 @@ export function address_graph(selector, query, options) {
         options.network == 'bsc_testnet' ||
         options.network == 'binance'
       ) {
-				// Binance
-				// value = c.token_id === '-' ? c.symbol : c.token_id
+        // Binance
+        // value = c.token_id === '-' ? c.symbol : c.token_id
         value = c.address === '-' ? c.symbol : c.token_id
       } else if (options.network == 'eos') {
         value = c.address
@@ -652,46 +670,49 @@ export function address_graph(selector, query, options) {
 
     select.find('select').on('change', function() {
       let currencyAddress = $(this).val()
-			g.setCurrency(currencyAddress)
+      g.setCurrency(currencyAddress)
       if (options.network && options.network.toLowerCase() == 'algorand') {
         currencyAddress = parseInt(currencyAddress)
       }
 
       query.request({
         network: query.variables.network,
-				address: query.variables.address,
-				currency: currencyAddress,
+        address: query.variables.address,
+        currency: currencyAddress,
       })
-    })
-	}
-	
-	g.refreshCurrencyFilter = () => {
-		jqContainer.find('.currency-filter').remove()
-		g.currencyFilter()
-	}
-
-  g.fullScreen = () => {
-    const fullScreenButton = $(
-      FullscreenButton(jqContainer.hasClass('fullscreen'))
-    )
-    jqContainer.append(fullScreenButton)
-
-    fullScreenButton.find('.fullscreen-button__icon').on('click', function() {
-      const icon = $(this)
-      $('#wrapper').toggleClass('fullscreen')
-      icon.toggleClass('fa-expand')
-      icon.toggleClass('fa-compress')
     })
   }
 
+  g.refreshCurrencyFilter = () => {
+    jqContainer.find('.currency-filter').remove()
+    g.currencyFilter()
+	}
+	
+	g.createBottomMenu = (buttons) => {
+		const menu = $(`
+			<div class="graph-bottom-menu"></div>
+		`)
+		jqContainer.append(menu)
+
+		addFullScreenButton(menu)
+
+		if (buttons && buttons.length > 0) {
+			const buttonsBlock = $(`<div class="graph-bottom-menu__buttons"></div>`)
+			menu.append(buttonsBlock)
+
+			if (_.includes(buttons, 'JS')) {
+				addModalJS(buttonsBlock, options.theme, options.title, g.JSCode, query.variables)
+			}
+		}
+	}
+
   g.initGraph = () => {
-		jqWrapper.removeClass('initializing')
-		g.setCurrency()
+    jqWrapper.removeClass('initializing')
+    g.setCurrency()
     g.setDataset()
 
     g.network = new Network(g.container, g.dataset, g.networkOptions)
 
-    g.editRootNode()
 
     g.network.on('dragEnd', (params) => {
       const nodeId = params.nodes[0]
@@ -704,15 +725,15 @@ export function address_graph(selector, query, options) {
       if (params.nodes.length > 0) {
         g.expand(params.nodes[0])
       }
-    })
+		})
+		
+		if (g.dataset.nodes.length == 0) return
 
-    // g.network.once('stabilized', function() {
-    // 	g.network.fit({animation: { duration: 500, easingFunction: 'easeInOutQuart' }})
-    // })
+    g.expandNode(query.variables.address)
 
     g.detailLevel(query.variables.limit)
     g.currencyFilter()
-    g.fullScreen()
+		g.createBottomMenu(options.buttons)
   }
 
   g.render = (isExpand) => {
@@ -721,10 +742,10 @@ export function address_graph(selector, query, options) {
     if (!g.dataset) {
       g.initGraph()
     } else if (!isExpand) {
-			g.refreshCurrencyFilter()
-			g.setCurrency()
+      g.refreshCurrencyFilter()
+      g.setCurrency()
       g.setDataset()
-      g.editRootNode()
+      g.expandNode(query.variables.address)
     } else {
       g.expandDataset()
     }

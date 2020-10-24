@@ -16,7 +16,8 @@ module.exports = {
 
   output: {
     filename: 'graphs.js',
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, '..', 'widgets', 'dist'),
+    // path: path.resolve(__dirname, 'dist'),
     library: 'graphs',
     libraryTarget: 'umd',
     // globalObject: 'this',
@@ -46,7 +47,8 @@ module.exports = {
 
   plugins: [
     new webpack.ProgressPlugin(),
-    new MiniCssExtractPlugin({ filename: 'graphs.css' }),
+    // new MiniCssExtractPlugin({ filename: 'graphs.css' }),
+    new MiniCssExtractPlugin({ filename: 'assets/css/graphs.css' }),
     // new workboxPlugin.GenerateSW({
     //   swDest: 'sw.js',
     //   clientsClaim: true,
