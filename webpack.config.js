@@ -3,14 +3,12 @@ const webpack = require('webpack')
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
-const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 
 const TerserPlugin = require('terser-webpack-plugin')
 
-const workboxPlugin = require('workbox-webpack-plugin')
-
 module.exports = {
-  mode: 'development',
+  mode: 'production',
 
   entry: {
     main: './src/index.js',
@@ -18,12 +16,9 @@ module.exports = {
 
   output: {
     filename: 'graphs.min.js',
-    // path: path.resolve(__dirname, '..', 'widgets', 'dist'),
     path: path.resolve(__dirname, 'dist'),
     library: 'graphs',
     libraryTarget: 'umd',
-    // globalObject: 'this',
-    // libraryExport: 'default'
   },
 
   externals: {
@@ -50,12 +45,6 @@ module.exports = {
   plugins: [
     new webpack.ProgressPlugin(),
     new MiniCssExtractPlugin({ filename: 'graphs.min.css' }),
-    // new MiniCssExtractPlugin({ filename: 'assets/css/graphs.css' }),
-    // new workboxPlugin.GenerateSW({
-    //   swDest: 'sw.js',
-    //   clientsClaim: true,
-    //   skipWaiting: false,
-    // }),
   ],
 
   module: {
@@ -104,30 +93,22 @@ module.exports = {
   },
 
   optimization: {
-		minimize: true,
+    minimize: true,
     minimizer: [
       new TerserPlugin({
         parallel: true,
         cache: true,
         sourceMap: true,
-			}),
-			new CssMinimizerPlugin({
-				sourceMap: true,
-			}),
+        terserOptions: {
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      }),
+      new CssMinimizerPlugin({
+        sourceMap: true,
+      }),
     ],
-
-    // splitChunks: {
-    //   cacheGroups: {
-    //     vendors: {
-    //       priority: -10,
-    //       test: /[\\/]node_modules[\\/]/,
-    //     },
-    //   },
-
-    //   chunks: 'async',
-    //   minChunks: 1,
-    //   minSize: 30000,
-    //   name: true,
-    // },
   },
 }
