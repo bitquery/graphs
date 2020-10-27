@@ -1,8 +1,7 @@
 import _ from 'lodash'
 import _n from 'numeral'
-import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min'
-// import { Network, DataSet } from '../node_modules/vis'
-import { LineLoader } from './components/LineLoader'
+import { Network, DataSet } from '../node_modules/vis'
+import { addInitializingLoader } from './addInitializingLoader'
 import { CurrencyFilter } from './components/CurrencyFilter'
 import { CurrencyFilterOption } from './components/CurrencyFilterOption'
 import { DetailLevel } from './components/DetailLevel'
@@ -10,11 +9,12 @@ import { DetailLevelPopup } from './components/DetailLevelPopup'
 import { addFullScreenButton } from './addFullScreenButton'
 import { lightenOrDarkenColor } from './lightenOrDarkenColor'
 import { addModalJS } from './addModalJS'
+import { addModalGraphQL } from './addModalGraphQL'
 import './style.scss'
 
 export function query(query) {
   return {
-    query,
+    query: query.trim(),
     variables: {},
 
     data: null,
@@ -28,13 +28,14 @@ export function query(query) {
     },
     components: [],
 
+		url: 'https://graphql.bitquery.io',
     request: function(variables, isExpand = false, refresh = true) {
       if (!_.isEmpty(this.variables)) {
         this.loading = true
         this.addLoader()
       }
 
-      fetch('https://graphql.bitquery.io', {
+      fetch(this.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +96,7 @@ export function address_graph(selector, query, options) {
 
   g.theme = options.theme || 'light'
 
-  if (options.theme == 'dark') {
+  if (g.theme == 'dark') {
     jqContainer
       .parents('div')
       .find('.card')
@@ -107,20 +108,7 @@ export function address_graph(selector, query, options) {
     .find('.card-header')
     .text(options.title || 'Default graph title')
 
-  {
-    jqWrapper.addClass('initializing')
-    const loading = $(LineLoader())
-    jqContainer.append(loading)
-    const line = $('.line-loader__line')
-    let i = 1
-    const interval = setInterval(function() {
-      if (i > Math.floor(Math.random() * 15) + 84) {
-        clearInterval(interval)
-      }
-      line.width(i + '%')
-      i = i + 1
-    }, 40)
-  }
+  addInitializingLoader(jqWrapper, jqContainer)
 
   g.networkOptions = {
     height: '100%',
@@ -538,9 +526,9 @@ export function address_graph(selector, query, options) {
 			const prevColor = node.icon.color
 			node.physics = false
       node.icon = {
-        color: lightenOrDarkenColor(prevColor, 20, options.theme == 'dark'),
+        color: lightenOrDarkenColor(prevColor, 20, g.theme == 'dark'),
       }
-      if (options.theme == 'dark') {
+      if (g.theme == 'dark') {
         node.shadow = {
           enabled: true,
           color: prevColor,
@@ -624,7 +612,11 @@ export function address_graph(selector, query, options) {
       // _.merge(query.variables, variables)
       query.request(variables)
     })
-  }
+	}
+	
+	g.editDetailLevel = (limit) => {
+		$('.detail-level__input').val(limit)
+	}
 
   g.currencyFilter = () => {
     if (g.currencies.length == 0) return
@@ -701,7 +693,10 @@ export function address_graph(selector, query, options) {
 			menu.append(buttonsBlock)
 
 			if (_.includes(buttons, 'JS')) {
-				addModalJS(buttonsBlock, options.theme, options.title, g.JSCode, query.variables)
+				addModalJS(buttonsBlock, g.JSCode, options, query)
+			}
+			if (_.includes(buttons, 'GraphQL')) {
+				addModalGraphQL(buttonsBlock, options, query)
 			}
 		}
 	}
@@ -743,7 +738,8 @@ export function address_graph(selector, query, options) {
       g.initGraph()
     } else if (!isExpand) {
       g.refreshCurrencyFilter()
-      g.setCurrency()
+			g.setCurrency()
+			g.editDetailLevel(query.variables.limit)
       g.setDataset()
       g.expandNode(query.variables.address)
     } else {

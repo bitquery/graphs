@@ -19,6 +19,7 @@
     "babel-loader": "^8.1.0",
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "css-loader": "^4.3.0",
+    "css-minimizer-webpack-plugin": "^1.1.5",
     "file-loader": "^6.1.1",
     "mini-css-extract-plugin": "^1.0.0",
     "node-sass": "^4.14.1",
@@ -30,11 +31,8 @@
     "workbox-webpack-plugin": "^5.1.4"
   },
   "dependencies": {
-    "graphql": "^15.3.0",
-    "jquery": "^3.5.1",
     "lodash": "^4.17.20",
     "numeral": "^2.0.6",
-    "vis": "^4.21.0-EOL",
-    "vis-network": "^8.4.0"
+    "vis": "^4.21.0-EOL"
   }
 }

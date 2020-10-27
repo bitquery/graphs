@@ -3,6 +3,8 @@ const webpack = require('webpack')
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+
 const TerserPlugin = require('terser-webpack-plugin')
 
 const workboxPlugin = require('workbox-webpack-plugin')
@@ -15,9 +17,9 @@ module.exports = {
   },
 
   output: {
-    filename: 'graphs.js',
-    path: path.resolve(__dirname, '..', 'widgets', 'dist'),
-    // path: path.resolve(__dirname, 'dist'),
+    filename: 'graphs.min.js',
+    // path: path.resolve(__dirname, '..', 'widgets', 'dist'),
+    path: path.resolve(__dirname, 'dist'),
     library: 'graphs',
     libraryTarget: 'umd',
     // globalObject: 'this',
@@ -31,24 +33,24 @@ module.exports = {
       amd: 'jquery',
       var: '$',
     },
-    // lodash: {
-    //   commonjs: 'lodash',
-    //   commonjs2: 'lodash',
-    // 	amd: 'lodash',
-    //   root: '_' // indicates global variable
-    // },
-    // numeral: {
-    //   commonjs: 'numeral',
-    //   commonjs2: 'numeral',
-    // 	amd: 'numeral',
-    //   var: '_n' // indicates global variable
-    // },
+    React: {
+      commonjs: 'React',
+      commonjs2: 'React',
+      amd: 'React',
+      var: 'React',
+    },
+    ReactDOM: {
+      commonjs: 'ReactDOM',
+      commonjs2: 'ReactDOM',
+      amd: 'ReactDOM',
+      var: 'ReactDOM',
+    },
   },
 
   plugins: [
     new webpack.ProgressPlugin(),
-    // new MiniCssExtractPlugin({ filename: 'graphs.css' }),
-    new MiniCssExtractPlugin({ filename: 'assets/css/graphs.css' }),
+    new MiniCssExtractPlugin({ filename: 'graphs.min.css' }),
+    // new MiniCssExtractPlugin({ filename: 'assets/css/graphs.css' }),
     // new workboxPlugin.GenerateSW({
     //   swDest: 'sw.js',
     //   clientsClaim: true,
@@ -93,29 +95,39 @@ module.exports = {
             loader: 'file-loader',
             options: {
               name: '[name].[ext]',
-              outputPath: 'fonts/'
-            }
-          }
-        ]
-      }
+              outputPath: 'fonts/',
+            },
+          },
+        ],
+      },
     ],
   },
 
   optimization: {
-    minimizer: [new TerserPlugin()],
+		minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        parallel: true,
+        cache: true,
+        sourceMap: true,
+			}),
+			new CssMinimizerPlugin({
+				sourceMap: true,
+			}),
+    ],
 
-    splitChunks: {
-      cacheGroups: {
-        vendors: {
-          priority: -10,
-          test: /[\\/]node_modules[\\/]/,
-        },
-      },
+    // splitChunks: {
+    //   cacheGroups: {
+    //     vendors: {
+    //       priority: -10,
+    //       test: /[\\/]node_modules[\\/]/,
+    //     },
+    //   },
 
-      chunks: 'async',
-      minChunks: 1,
-      minSize: 30000,
-      name: true,
-    },
+    //   chunks: 'async',
+    //   minChunks: 1,
+    //   minSize: 30000,
+    //   name: true,
+    // },
   },
 }

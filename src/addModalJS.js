@@ -1,13 +1,13 @@
-export const addModalJS = (container, theme, title, JSCode, variables) => {
+export const addModalJS = (container, JSCode, options, query) => {
   const modalJS = $(`
 	<div>
 		<a class="badge badge-secondary open-btn">JS</a>
-		<div class="graph-modal ${theme == 'dark' ? 'dark' : ''}" id="graph-modal-js" tabindex="-1">
+		<div class="graph-modal ${options.theme == 'dark' ? 'dark' : ''}" id="graph-modal-js" tabindex="-1">
 				<div class="graph-modal-dialog">
 						<div class="graph-modal-content">
 								<div class="graph-modal-header">
 										<button type="button" class="graph-modal-close close-btn" >&times;</button>
-										<h4 class="graph-modal-title">${title}</h4>
+										<h4 class="graph-modal-title">${options.title}</h4>
 								</div>
 								<div class="graph-modal-body">
 									<textarea>${JSCode}</textarea>
@@ -25,7 +25,7 @@ export const addModalJS = (container, theme, title, JSCode, variables) => {
 
 	const openModal = () => {
 		const textarea = modalJS.find('textarea')
-		textarea.text(textarea.text().replace(/query.request\(.*\)/, `query.request(${JSON.stringify(variables)})`))
+		textarea.text(textarea.text().replace(/query.request\(.*\)/, `query.request(${JSON.stringify(query.variables)})`))
 		$('body').addClass('graph-modal-open')
 		$('#graph-modal-js').addClass('graph-modal-shown')
 	}
