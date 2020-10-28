@@ -85,7 +85,9 @@ export function address_graph(selector, query, options) {
   g.container = document.querySelector(selector)
 	const jqContainer = $(g.container)
 	
-	g.JSCode = jqContainer.parents('.row')[0].outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`)
+	g.JSCode = jqContainer.parents('.row')[0].outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`).replace(/<script>/, `  <link rel="stylesheet" media="all" href="https://cdn.jsdelivr.net/gh/bitquery/graphs/dist/graphs.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/bitquery/graphs/dist/graphs.min.js"></script>
+  <script>`)
 
   jqContainer.wrap('<div id="wrapper" class="wrapper">')
   // a trick for the icons in the graph to be loaded

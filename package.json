@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Graph-type widgets library",
   "main": "dist/graphs.min.js",
-  "module": "dist/graphs.min.js",
+	"module": "dist/graphs.min.js",
+	"files": [
+		"dist"
+	],
   "scripts": {
     "test": "echo \"Error: no test specified\"",
     "dev": "webpack -w",
@@ -11,7 +14,7 @@
   },
   "keywords": [],
   "author": "Ivanov Andrey <ivanov17andrey@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.11.6",
     "@babel/preset-env": "^7.11.5",
