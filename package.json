@@ -1,17 +1,22 @@
 {
   "name": "@bitquery/graph",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Graph-type widgets library",
   "main": "dist/graphs.min.js",
-	"module": "dist/graphs.min.js",
-	"files": [
-		"dist"
-	],
-	"repository": {
-		"type" : "git",
-		"url" : "https://github.com/bitquery/graphs.git"
-	},
-  "keywords": ["bitquery", "blockchain", "graph", "vis"],
+  "module": "dist/graphs.min.js",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bitquery/graphs.git"
+  },
+  "keywords": [
+    "bitquery",
+    "blockchain",
+    "graph",
+    "vis"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\"",
     "dev": "webpack -w",
