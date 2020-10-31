@@ -1,7 +1,9 @@
 # graphs
 Graph-type widgets library
 # Description
-It is a library for graph visualization based on blockchain data
+Library for graph visualization based on blockchain data
+
+You can see how it works on [explorer.bitquery.io](https://explorer.bitquery.io)
 # Installation
 Clone this repo and run
 
@@ -14,3 +16,6 @@ To build app, run
 `
 npm run build
 `
+
+# License
+This project is licensed under the terms of the MIT license.
