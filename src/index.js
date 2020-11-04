@@ -28,7 +28,7 @@ export function query(query) {
     },
     components: [],
 
-		url: 'https://graphql.bitquery.io',
+    url: 'https://graphql.bitquery.io',
     request: function(variables, isExpand = false, refresh = true) {
       if (!_.isEmpty(this.variables)) {
         this.loading = true
@@ -50,6 +50,7 @@ export function query(query) {
         .then((data) => {
           if (_.isEmpty(this.variables)) {
             this.variables = variables
+            this.currencyType = typeof variables.currency
           }
 
           if (refresh) _.merge(this.variables, variables)
@@ -83,11 +84,17 @@ export function address_graph(selector, query, options) {
   const g = {}
 
   g.container = document.querySelector(selector)
-	const jqContainer = $(g.container)
-	
-	g.JSCode = jqContainer.parents('.row')[0].outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`).replace(/<script>/, `  <link rel="stylesheet" media="all" href="https://cdn.jsdelivr.net/gh/bitquery/graphs/dist/graphs.min.css">
+  const jqContainer = $(g.container)
+
+  g.JSCode = jqContainer
+    .parents('.row')[0]
+    .outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`)
+    .replace(
+      /<script>/,
+      `  <link rel="stylesheet" media="all" href="https://cdn.jsdelivr.net/gh/bitquery/graphs/dist/graphs.min.css">
   <script src="https://cdn.jsdelivr.net/gh/bitquery/graphs/dist/graphs.min.js"></script>
-  <script>`)
+  <script>`
+    )
 
   jqContainer.wrap('<div id="wrapper" class="wrapper">')
   // a trick for the icons in the graph to be loaded
@@ -128,58 +135,17 @@ export function address_graph(selector, query, options) {
     },
   }
 
-  g.setCurrency = (value) => {
-    if (options.currency) {
-      // Bitcoin
-      g.currencies = []
-      g.currency = options.currency
-    } else if (options.currencies.length > 0) {
-      g.currencies = options.currencies
-      if (options.network == 'algorand') {
-        g.currency = (
-          _.find(g.currencies, {
-            token_id: value || query.variables.currency + '',
-          }) ||
-          g.currencies[0] || { symbol: value || query.variables.currency }
-        ).symbol
-      } else if (
-        options.network == 'bsc' ||
-        options.network == 'bsc_testnet' ||
-        options.network == 'binance'
-      ) {
-        // Binance
-        g.currency = (
-          _.find(g.currencies, {
-            token_id: value || query.variables.currency,
-          }) || g.currencies[0]
-        ).symbol
-      } else if (options.network == 'eos') {
-        g.currency = (
-          _.find(g.currencies, {
-            address: value || query.variables.currency,
-          }) || g.currencies[0]
-        ).symbol
-      } else if (options.network == 'tron') {
-        g.currency = (
-          _.find(g.currencies, {
-            token_id: value || query.variables.currency,
-          }) ||
-          _.find(g.currencies, {
-            address: value || query.variables.currency,
-          }) ||
-          g.currencies[0]
-        ).symbol
-      } else {
-        // Conflux, Ethereum, Libra
-        g.currency = (
-          _.find(g.currencies, {
-            address: value || query.variables.currency,
-          }) || g.currencies[0]
-        ).symbol
-      }
-    } else {
-      g.currencies = []
+  g.setCurrency = () => {
+    // currency value for label in graph
+    if (g.currencies.length == 0) {
+      g.currency = query.variables.network
+      return
     }
+    g.currency = (
+      _.find(g.currencies, {
+        search: query.variables.currency,
+      }) || g.currencies[0]
+    ).symbol
   }
 
   g.hashCode = (data) => {
@@ -525,8 +491,8 @@ export function address_graph(selector, query, options) {
     const node = g.dataset.nodes.get(address)
     if (!node.expanded) {
       node.expanded = true
-			const prevColor = node.icon.color
-			node.physics = false
+      const prevColor = node.icon.color
+      node.physics = false
       node.icon = {
         color: lightenOrDarkenColor(prevColor, 20, g.theme == 'dark'),
       }
@@ -576,7 +542,7 @@ export function address_graph(selector, query, options) {
   }
 
   g.expand = (address) => {
-		const node = g.dataset.nodes.get(address)
+    const node = g.dataset.nodes.get(address)
     if (!node.expanded) {
       g.expandNode(address)
       query.request({ address: address }, true, false)
@@ -611,44 +577,20 @@ export function address_graph(selector, query, options) {
       const variables = {
         limit: parseInt($(this).val()),
       }
-      // _.merge(query.variables, variables)
       query.request(variables)
     })
-	}
-	
-	g.editDetailLevel = (limit) => {
-		$('.detail-level__input').val(limit)
-	}
+  }
+
+  g.editDetailLevel = (limit) => {
+    $('.detail-level__input').val(limit)
+  }
 
   g.currencyFilter = () => {
     if (g.currencies.length == 0) return
     const select = $(CurrencyFilter())
+    // currnecy value for search in graphql
     _.each(g.currencies, function(c) {
-      let value
-      if (options.network == 'algorand') {
-        value = c.token_id
-      } else if (
-        options.network == 'bsc' ||
-        options.network == 'bsc_testnet' ||
-        options.network == 'binance'
-      ) {
-        // Binance
-        // value = c.token_id === '-' ? c.symbol : c.token_id
-        value = c.address === '-' ? c.symbol : c.token_id
-      } else if (options.network == 'eos') {
-        value = c.address
-      } else if (options.network == 'tron') {
-        if (c.token_id == '0' && c.address == '-') {
-          value = c.symbol
-        } else if (c.token_id == '0') {
-          value = c.address
-        } else {
-          value = c.token_id
-        }
-      } else {
-        // Conflux, Ethereum, Libra
-        value = c.address === '-' ? c.symbol : c.address
-      }
+      let value = c.search
       select
         .find('select')
         .append(
@@ -664,8 +606,8 @@ export function address_graph(selector, query, options) {
 
     select.find('select').on('change', function() {
       let currencyAddress = $(this).val()
-      g.setCurrency(currencyAddress)
-      if (options.network && options.network.toLowerCase() == 'algorand') {
+
+      if (query.currencyType == 'number') {
         currencyAddress = parseInt(currencyAddress)
       }
 
@@ -680,36 +622,30 @@ export function address_graph(selector, query, options) {
   g.refreshCurrencyFilter = () => {
     jqContainer.find('.currency-filter').remove()
     g.currencyFilter()
-	}
-	
-	g.createBottomMenu = (buttons) => {
-		const menu = $(`
+  }
+
+  g.createBottomMenu = () => {
+    const menu = $(`
 			<div class="graph-bottom-menu"></div>
 		`)
-		jqContainer.append(menu)
+    jqContainer.append(menu)
 
-		addFullScreenButton(menu)
+    addFullScreenButton(menu)
 
-		if (buttons && buttons.length > 0) {
-			const buttonsBlock = $(`<div class="graph-bottom-menu__buttons"></div>`)
-			menu.append(buttonsBlock)
+    const buttonsBlock = $(`<div class="graph-bottom-menu__buttons"></div>`)
+    menu.append(buttonsBlock)
 
-			if (_.includes(buttons, 'JS')) {
-				addModalJS(buttonsBlock, g.JSCode, options, query)
-			}
-			if (_.includes(buttons, 'GraphQL')) {
-				addModalGraphQL(buttonsBlock, options, query)
-			}
-		}
-	}
+    addModalJS(buttonsBlock, g.JSCode, options, query)
+    addModalGraphQL(buttonsBlock, options, query)
+  }
 
   g.initGraph = () => {
     jqWrapper.removeClass('initializing')
+    g.currencies = options.currencies
     g.setCurrency()
     g.setDataset()
 
     g.network = new Network(g.container, g.dataset, g.networkOptions)
-
 
     g.network.on('dragEnd', (params) => {
       const nodeId = params.nodes[0]
@@ -722,15 +658,15 @@ export function address_graph(selector, query, options) {
       if (params.nodes.length > 0) {
         g.expand(params.nodes[0])
       }
-		})
-		
-		if (g.dataset.nodes.length == 0) return
+    })
+
+    if (g.dataset.nodes.length == 0) return
 
     g.expandNode(query.variables.address)
 
     g.detailLevel(query.variables.limit)
     g.currencyFilter()
-		g.createBottomMenu(options.buttons)
+    g.createBottomMenu(options.buttons)
   }
 
   g.render = (isExpand) => {
@@ -740,8 +676,8 @@ export function address_graph(selector, query, options) {
       g.initGraph()
     } else if (!isExpand) {
       g.refreshCurrencyFilter()
-			g.setCurrency()
-			g.editDetailLevel(query.variables.limit)
+      g.setCurrency()
+      g.editDetailLevel(query.variables.limit)
       g.setDataset()
       g.expandNode(query.variables.address)
     } else {

@@ -17,5 +17,10 @@ To build app, run
 npm run build
 `
 
+# Quick start
+Several quick start options are available:
+* Install with npm `npm i @bitquery/graph`
+* Clone the repo: `git clone https://github.com/bitquery/graphs.git`
+* Download the latest release
 # License
 This project is licensed under the terms of the MIT license.
