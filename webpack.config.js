@@ -94,8 +94,7 @@ module.exports = {
   },
 
   optimization: {
-    minimize: false,
-    // minimize: true,
+    minimize: true,
     minimizer: [
       new TerserPlugin({
         parallel: true,

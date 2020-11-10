@@ -666,8 +666,9 @@ export function address_graph(selector, query, options) {
     })
 
     g.network.on('oncontext', function(params) {
-      if (params.nodes.length > 0) {
-				let node = g.dataset.nodes.get(params.nodes[0])
+			let nodeId = g.network.getNodeAt(params.pointer.DOM)
+      if (nodeId) {
+				let node = g.dataset.nodes.get(nodeId)
 				const pathname = window.location.pathname.slice(1)
         window.open(`${window.location.origin}/${pathname.slice(0, pathname.indexOf('/'))}/address/${node.id}`, '_blank')
       }
