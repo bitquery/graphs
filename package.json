@@ -44,7 +44,8 @@
   },
   "dependencies": {
     "d3": "^6.2.0",
-    "d3-sankey": "^0.12.3",
+    "d3-path-arrows": "^0.4.0",
+    "d3-sankey-circular": "^0.34.0",
     "lodash": "^4.17.20",
     "numeral": "^2.0.6",
     "vis": "^4.21.0-EOL"

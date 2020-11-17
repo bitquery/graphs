@@ -8,14 +8,20 @@ import { CurrencyFilterOption } from './components/CurrencyFilterOption'
 import { DetailLevel } from './components/DetailLevel'
 import { DetailLevelPopup } from './components/DetailLevelPopup'
 import { addFullScreenButton } from './addFullScreenButton'
-import { lightenOrDarkenColor } from './lightenOrDarkenColor'
+import { lightenOrDarkenColor } from './util/lightenOrDarkenColor'
 import { addModalJS } from './addModalJS'
 import { addModalGraphQL } from './addModalGraphQL'
 
-// import * as d3 from 'd3'
-// import { sankey as d3Sankey, sankeyLinkHorizontal } from 'd3-sankey'
+import * as d3 from 'd3'
+import * as d3Sankey from 'd3-sankey-circular'
+import * as d3PathArrows from 'd3-path-arrows'
+import uid from './util/uid'
 
 import './style.scss'
+
+// window.d3 = d3
+// window.d3Sankey = d3Sankey
+// window.d3PathArrows = d3PathArrows
 
 export function query(query) {
   return {
@@ -666,11 +672,17 @@ export function address_graph(selector, query, options) {
     })
 
     g.network.on('oncontext', function(params) {
-			let nodeId = g.network.getNodeAt(params.pointer.DOM)
+      let nodeId = g.network.getNodeAt(params.pointer.DOM)
       if (nodeId) {
-				let node = g.dataset.nodes.get(nodeId)
-				const pathname = window.location.pathname.slice(1)
-        window.open(`${window.location.origin}/${pathname.slice(0, pathname.indexOf('/'))}/address/${node.id}`, '_blank')
+        let node = g.dataset.nodes.get(nodeId)
+        const pathname = window.location.pathname.slice(1)
+        window.open(
+          `${window.location.origin}/${pathname.slice(
+            0,
+            pathname.indexOf('/')
+          )}/address/${node.id}`,
+          '_blank'
+        )
       }
     })
 
@@ -703,139 +715,346 @@ export function address_graph(selector, query, options) {
   return g
 }
 
-// export function address_sankey(selector, data, options) {
-//   var units = 'Widgets'
+export function address_sankey(selector, query) {
+  const g = {}
 
-//   // set the dimensions and margins of the graph
-//   var margin = { top: 10, right: 10, bottom: 10, left: 10 },
-//     width = 700 - margin.left - margin.right,
-//     height = 300 - margin.top - margin.bottom
+  g.render = () => {
+    var margin = { x: 30, y: 30 }
+    var width = $(selector).width()
+    var height = 600
+    const edgeColor = 'path'
 
-//   // format variables
-//   var formatNumber = d3.format(',.0f'), // zero decimal places
-//     format = function(d) {
-//       return formatNumber(d) + ' ' + units
-//     },
-//     color = d3.scaleOrdinal(d3.schemeCategory10)
+    const prepareData = (sampleData) => {
+      const prepareLinks = (data) => {
+        const links = []
 
-//   // append the svg object to the body of the page
-//   var svg = d3
-//     .select('body')
-//     .append('svg')
-//     .attr('width', width + margin.left + margin.right)
-//     .attr('height', height + margin.top + margin.bottom)
-//     .append('g')
-//     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+        _.each(data.ethereum.inbound, (item) => {
+          links.push({
+            source: item.sender.address,
+            target: item.receiver.address,
+            amount: item.amount,
+            // value: item.amount,
+            value: item.amount < 30 ? 30 : Math.pow(item.amount, 1 / 3),
+          })
+        })
 
-//   // Set the sankey diagram properties
-//   var sankey = d3Sankey()
-//     .nodeWidth(36)
-//     .nodePadding(40)
-//     .size([width, height])
+        _.each(data.ethereum.outbound, (item) => {
+          links.push({
+            source: item.sender.address,
+            target: item.receiver.address,
+            amount: item.amount,
+            // value: item.amount,
+            value: item.amount < 30 ? 30 : Math.pow(item.amount, 1 / 3),
+          })
+        })
 
-//   var path = sankeyLinkHorizontal()
+        return links
+      }
 
-//   // load the data
-//   d3.json('./graph/src/sankey.json').then(function(graph) {
-//     sankey
-//       .nodes(graph.nodes)
-//       .links(graph.links)
+      const links = prepareLinks(sampleData)
 
-//     // add in the links
-//     var link = svg
-//       .append('g')
-//       .selectAll('.link')
-//       .data(graph.links)
-//       .enter()
-//       .append('path')
-//       .attr('class', 'link')
-//       .attr('d', path)
-//       .style('stroke-width', function(d) {
-//         return Math.max(1, d.dy)
-//       })
-//       .sort(function(a, b) {
-//         return b.dy - a.dy
-//       })
+      const nodes = Array.from(
+        new Set(links.flatMap((l) => [l.source, l.target])),
+        (name) => ({ name })
+      )
 
-//     // add the link titles
-//     link.append('title').text(function(d) {
-//       return d.source.name + ' → ' + d.target.name + '\n' + format(d.value)
-//     })
+      return {
+        links,
+        nodes,
+        units: 'ETH',
+      }
+    }
 
-//     // add in the nodes
-//     var node = svg
-//       .append('g')
-//       .selectAll('.node')
-//       .data(graph.nodes)
-//       .enter()
-//       .append('g')
-//       .attr('class', 'node')
-//       .attr('transform', function(d) {
-//         return 'translate(' + d.x + ',' + d.y + ')'
-//       })
-//       .call(
-//         d3
-//           .drag()
-//           .subject(function(d) {
-//             return d
-//           })
-//           .on('start', function() {
-//             this.parentNode.appendChild(this)
-//           })
-//           .on('drag', dragmove)
-//       )
+    const data = prepareData(query.data)
 
-//     // add the rectangles for the nodes
-//     node
-//       .append('rect')
-//       .attr('height', function(d) {
-//         return d.dy
-//       })
-//       .attr('width', sankey.nodeWidth())
-//       .style('fill', function(d) {
-//         return (d.color = color(d.name.replace(/ .*/, '')))
-//       })
-//       .style('stroke', function(d) {
-//         return d3.rgb(d.color).darker(2)
-//       })
-//       .append('title')
-//       .text(function(d) {
-//         return d.name + '\n' + format(d.value)
-//       })
+    const colorSchemaOdd = d3.scaleOrdinal(d3.schemeCategory10.slice(0, 5))
+    const colorSchemaEven = d3.scaleOrdinal(d3.schemeCategory10.slice(5))
+    const color = (d) => {
+      return d.column % 2 == 0
+        ? colorSchemaOdd(d.category === undefined ? d.name : d.category)
+        : colorSchemaEven(d.category === undefined ? d.name : d.category)
+    }
 
-//     // add in the title for the nodes
-//     node
-//       .append('text')
-//       .attr('x', -6)
-//       .attr('y', function(d) {
-//         return d.dy / 2
-//       })
-//       .attr('dy', '.35em')
-//       .attr('text-anchor', 'end')
-//       .attr('transform', null)
-//       .text(function(d) {
-//         return d.name
-//       })
-//       .filter(function(d) {
-//         return d.x < width / 2
-//       })
-//       .attr('x', 6 + sankey.nodeWidth())
-//       .attr('text-anchor', 'start')
+    const format = data.units
+      ? (d) => `${_n(d).format('0.0000a')} ${data.units}`
+      : (d) => `${_n(d).format('0.0000a')}`
 
-//     // the function for moving the nodes
-//     function dragmove(d) {
-//       d3.select(this).attr(
-//         'transform',
-//         'translate(' +
-//           d.x +
-//           ',' +
-//           (d.y = Math.max(0, Math.min(height - d.dy, d3.event.y))) +
-//           ')'
-//       )
-//       sankey.relayout()
-//       link.attr('d', path)
+    // const sankey = d3Sankey
+    const sankey = d3Sankey
+      .sankeyCircular()
+      .nodeId((d) => d.name)
+      // .nodeAlign(d3[`sankey${align[0].toUpperCase()}${align.slice(1)}`])
+      .nodeAlign(d3Sankey.sankeyJustify)
+      // .nodeAlign(d3Sankey.sankeyJustify)
+      .nodeWidth(15)
+      // .nodePadding(6)
+      .nodePaddingRatio(0.3)
+      .circularLinkGap(2)
+      .extent([[width * 0.05, height * 0.1], [width * 0.95, height * 0.9]])
+    // .size([width - 2 * margin.x, height - 2 * margin.y])
+
+    const graph = sankey(data)
+
+    const svg = d3
+      .select(selector)
+      .append('svg')
+      .attr('viewBox', `0 0 ${width} ${height}`)
+    // .attr('width', width)
+    // .attr('height', height)
+    // .attr('width', width + margin.left + margin.right)
+    // .attr('height', height + margin.top + margin.bottom)
+
+    const g = svg.append('g').attr('transform', `translate(0,${margin.y})`)
+
+    const linkG = g
+      .append('g')
+      .attr('class', 'links')
+      .attr('fill', 'none')
+      .attr('stroke-opacity', 0.5)
+      .selectAll('path')
+
+    const nodeG = g
+      .append('g')
+      .attr('class', 'nodes')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', 10)
+      .selectAll('g')
+
+    const node = nodeG
+      .data(graph.nodes)
+      .enter()
+      .append('g')
+
+    node
+      .append('rect')
+      .attr('x', (d) => d.x0)
+      .attr('y', (d) => d.y0)
+      .attr('height', (d) => d.y1 - d.y0)
+      .attr('width', (d) => d.x1 - d.x0)
+      .attr('fill', color)
+      .attr('stroke', 'black')
+      .attr('stroke-width', 0.5)
+      .on('mouseover', (e, d) => {
+        let thisName = d.name
+
+        node
+          .selectAll('rect')
+          .style('opacity', (d) => highlightNodes(d, thisName))
+
+        d3.selectAll('.sankey-link').style('opacity', (l) =>
+          l.source.name == thisName || l.target.name == thisName ? 1 : 0.3
+        )
+
+        node
+          .selectAll('text')
+          .style('opacity', (d) => highlightNodes(d, thisName))
+      })
+      .on('mouseout', (d) => {
+        d3.selectAll('rect').style('opacity', 1)
+        d3.selectAll('.sankey-link').style('opacity', 0.7)
+        d3.selectAll('text').style('opacity', 1)
+      })
+
+    node
+      .append('text')
+      .attr('x', (d) => (d.x0 + d.x1) / 2)
+      .attr('y', (d) => d.y0 - 2)
+      // .attr('dy', '0.35em')
+      .attr('text-anchor', 'middle')
+      .text((d) => d.name.slice(0, 10) + '...')
+
+    node.append('title').text((d) => {
+      let income = 0
+      _.each(d.targetLinks, (l) => {
+        income += l.amount
+      })
+      let outcome = 0
+      _.each(d.sourceLinks, (l) => {
+        outcome += l.amount
+      })
+      return `${d.name}\n${format(Math.max(income, outcome))}`
+    })
+
+    const link = linkG
+      .data(graph.links)
+      .enter()
+      .append('g')
+
+    if (edgeColor === 'path') {
+      const gradient = link
+        .append('linearGradient')
+        .attr('id', (d) => (d.uid = uid('link')).id)
+        .attr('gradientUnits', 'userSpaceOnUse')
+        .attr('x1', (d) => d.source.x1)
+        .attr('x2', (d) => d.target.x0)
+
+      gradient
+        .append('stop')
+        .attr('offset', '0%')
+        .attr('stop-color', (d) => color(d.source))
+
+      gradient
+        .append('stop')
+        .attr('offset', '100%')
+        .attr('stop-color', (d) => color(d.target))
+    }
+
+    link
+      .append('path')
+      .attr('class', 'sankey-link')
+      .attr('d', function(link) {
+        return link.path
+      })
+      .attr('stroke', (d) =>
+        edgeColor === 'none'
+          ? '#aaa'
+          : edgeColor === 'path'
+          ? d.uid
+          : edgeColor === 'input'
+          ? color(d.source)
+          : color(d.target)
+      )
+      .attr('stroke-width', (d) => Math.max(1, d.width))
+      .attr('opacity', 0.7)
+      .style('mix-blend-mode', 'multiply')
+      .on('mouseover', (e, l) => {
+        let source = l.source.name
+        let target = l.target.name
+
+        d3.selectAll('.sankey-link').style('opacity', (l) =>
+          l.source.name == source && l.target.name == target ? 1 : 0.3
+        )
+
+        node.selectAll('rect').style('opacity', (d) => {
+          return d.name == source || d.name == target ? 1 : 0.3
+        })
+
+        node.selectAll('text').style('opacity', (d) => {
+          return d.name == source || d.name == target ? 1 : 0.3
+        })
+      })
+      .on('mouseout', (d) => {
+        d3.selectAll('rect').style('opacity', 1)
+        d3.selectAll('.sankey-link').style('opacity', 0.7)
+        d3.selectAll('text').style('opacity', 1)
+      })
+
+    link
+      .append('title')
+      .text((d) => `${d.source.name} → ${d.target.name}\n${format(d.amount)}`)
+
+		let arrows = d3PathArrows
+			.pathArrows()
+      .arrowLength(10)
+      .gapLength(150)
+      .arrowHeadSize(4)
+      .path(function(link) {
+        return link.path
+      })
+
+    const arrowsG = linkG
+      .data(graph.links)
+      .enter()
+      .append('g')
+      .attr('class', 'g-arrow')
+      .call(arrows)
+
+    function highlightNodes(node, name) {
+      let opacity = 0.3
+
+      if (node.name == name) {
+        opacity = 1
+      }
+      node.sourceLinks.forEach(function(link) {
+        if (link.target.name == name) {
+          opacity = 1
+        }
+      })
+      node.targetLinks.forEach(function(link) {
+        if (link.source.name == name) {
+          opacity = 1
+        }
+      })
+
+      return opacity
+    }
+
+    const chart = svg.node()
+    $(selector).html(chart)
+  }
+
+  query.components.push(g)
+  return g
+}
+
+
+
+// const queryInstance = new query(`
+// query ($network: EthereumNetwork!, $address: String!, $limit: Int!, $currency: String!, $from: ISO8601DateTime, $till: ISO8601DateTime) {
+//   ethereum(network: $network) {
+//     inbound: coinpath(receiver: {is: $address}, currency:{is: $currency}, options: {desc: "amount", limit: $limit}, date:{since: $from, till: $till}) {
+//       sender {
+//         address
+//         annotation
+//         smartContract {
+//           contractType
+//           currency {
+//             symbol
+//             name
+//           }
+//         }
+//       }
+//       receiver {
+//         address
+//         annotation
+//         smartContract {
+//           contractType
+//           currency {
+//             symbol
+//             name
+//           }
+//         }
+//       }
+//       amount
 //     }
-//   })
+//     outbound: coinpath(sender: {is: $address}, currency:{is: $currency}, options: {desc: "amount", limit: $limit}, date:{since: $from, till: $till}) {
+//       sender {
+//         address
+//         annotation
+//         smartContract {
+//           contractType
+//           currency {
+//             symbol
+//             name
+//           }
+//         }
+//       }
+//       receiver {
+//         address
+//         annotation
+//         smartContract {
+//           contractType
+//           currency {
+//             symbol
+//             name
+//           }
+//         }
+//       }
+//       amount
+//     }
+//   }
 // }
+// `)
+// window.queryInstance = queryInstance
+// window.sankey = new address_sankey('#sankey-graph', queryInstance)
 
-// address_sankey()
+// queryInstance.request({
+//   limit: 10,
+//   offset: 0,
+//   network: 'ethereum',
+//   address: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+//   currency: 'ETH',
+//   from: null,
+//   till: null,
+//   dateFormat: '%Y-%m',
+// })
