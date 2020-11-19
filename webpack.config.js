@@ -16,6 +16,7 @@ module.exports = {
 
   output: {
     filename: 'graphs.min.js',
+    // path: path.resolve(__dirname, '../widgets/dist'),
     // path: path.resolve(__dirname, '../explorer/app/javascript/packs'),
     path: path.resolve(__dirname, 'dist'),
     library: 'graphs',

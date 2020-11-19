@@ -1,4 +1,4 @@
-export const addFullScreenButton = (container) => {
+export const addFullScreenButton = (container, wrapperElem) => {
   const fullScreenButton = $(
     `<div class="fullscreen-button" title="Minimize"><i class="fullscreen-button__icon fas fa-expand"></i></div>`
   )
@@ -6,7 +6,7 @@ export const addFullScreenButton = (container) => {
 
   fullScreenButton.find('.fullscreen-button__icon').on('click', function() {
     const icon = $(this)
-    $('#wrapper').toggleClass('fullscreen')
+    wrapperElem.toggleClass('fullscreen')
     icon.toggleClass('fa-expand')
     icon.toggleClass('fa-compress')
   })

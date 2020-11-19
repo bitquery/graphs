@@ -19,10 +19,6 @@ import uid from './util/uid'
 
 import './style.scss'
 
-// window.d3 = d3
-// window.d3Sankey = d3Sankey
-// window.d3PathArrows = d3PathArrows
-
 export function query(query) {
   return {
     query: query.trim(),
@@ -63,7 +59,7 @@ export function query(query) {
             this.variables = variables
             this.currencyType = typeof variables.currency
           }
-
+          this.currentAddress = variables.address
           if (refresh) _.merge(this.variables, variables)
           if (this.loading) {
             this.loading = false
@@ -96,6 +92,9 @@ export function address_graph(selector, query, options) {
 
   g.container = document.querySelector(selector)
   const jqContainer = $(g.container)
+  jqContainer.addClass('graph')
+  jqContainer.wrap('<div class="wrapper">')
+  const jqWrapper = jqContainer.parent('.wrapper')
 
   g.JSCode = jqContainer
     .parents('.row')[0]
@@ -107,24 +106,19 @@ export function address_graph(selector, query, options) {
   <script>`
     )
 
-  jqContainer.wrap('<div id="wrapper" class="wrapper">')
   // a trick for the icons in the graph to be loaded
   jqContainer.append(
     '<i class="fa fa-flag" style="visibility:hidden;position:absolute;"></i>'
   )
-  const jqWrapper = $('#wrapper')
 
   g.theme = options.theme || 'light'
 
   if (g.theme == 'dark') {
-    jqContainer
-      .parents('div')
-      .find('.card')
-      .addClass('dark')
+    jqContainer.parents('.card').addClass('dark')
   }
 
   jqContainer
-    .parents('div')
+    .parents('.card')
     .find('.card-header')
     .text(options.title || 'Default graph title')
 
@@ -149,10 +143,10 @@ export function address_graph(selector, query, options) {
   g.setCurrency = () => {
     // currency value for label in graph
     if (g.currencies.length == 0) {
-      g.currency = query.variables.network
+      query.currency = query.variables.network
       return
     }
-    g.currency = (
+    query.currency = (
       _.find(g.currencies, {
         search: query.variables.currency,
       }) || g.currencies[0]
@@ -389,7 +383,7 @@ export function address_graph(selector, query, options) {
 
   g.prepareEdges = (edges, receiver = true) => {
     const prepareEdge = (edge) => {
-      let currency_name = g.currency
+      let currency_name = query.currency
       let width = edge.amount > 1 ? 1.5 * Math.log10(edge.amount) + 1 : 1
       let value =
         parseFloat(edge.amount) <= 1e-6
@@ -641,7 +635,7 @@ export function address_graph(selector, query, options) {
 		`)
     jqContainer.append(menu)
 
-    addFullScreenButton(menu)
+    addFullScreenButton(menu, jqWrapper)
 
     const buttonsBlock = $(`<div class="graph-bottom-menu__buttons"></div>`)
     menu.append(buttonsBlock)
@@ -672,6 +666,7 @@ export function address_graph(selector, query, options) {
     })
 
     g.network.on('oncontext', function(params) {
+      event.preventDefault()
       let nodeId = g.network.getNodeAt(params.pointer.DOM)
       if (nodeId) {
         let node = g.dataset.nodes.get(nodeId)
@@ -715,36 +710,146 @@ export function address_graph(selector, query, options) {
   return g
 }
 
-export function address_sankey(selector, query) {
+export function address_sankey(selector, query, options) {
   const g = {}
 
+  g.container = document.querySelector(selector)
+  const jqContainer = $(g.container)
+  jqContainer.addClass('graph')
+  jqContainer.wrap('<div class="wrapper">')
+  const jqWrapper = jqContainer.parent('.wrapper')
+
+  g.theme = options.theme || 'light'
+
+  if (g.theme == 'dark') {
+    jqContainer.parents('.card').addClass('dark')
+  }
+
+  addInitializingLoader(jqWrapper, jqContainer)
+
+  g.detailLevel = (limit) => {
+    const graphDetailLevel = $(DetailLevel(limit))
+    const val = $(DetailLevelPopup(g.theme))
+
+    jqContainer.append(graphDetailLevel)
+
+    graphDetailLevel.find('input').val(query.variables.limit)
+
+    graphDetailLevel
+      .find('input')
+      .on('mousedown', function(e) {
+        $('body').append(val)
+        val.css({ left: e.pageX - 20, top: e.pageY - 40 })
+        val.html($(this).val())
+        $(this).on('mousemove', function(e) {
+          val.css({ left: e.pageX - 20 })
+          val.html($(this).val())
+        })
+      })
+      .on('mouseup', function(e) {
+        val.remove()
+        $(this).off('mousemove')
+      })
+
+    graphDetailLevel.find('input').on('change', function(e) {
+      const variables = {
+        limit: parseInt($(this).val()),
+      }
+      query.request(variables)
+    })
+  }
+
+  g.editDetailLevel = (limit) => {
+    $('.detail-level__input').val(limit)
+  }
+
+  g.setCurrency = () => {
+    // currency value for label in graph
+    if (g.currencies.length == 0) {
+      query.currency = query.variables.network
+      return
+    }
+    query.currency = (
+      _.find(g.currencies, {
+        search: query.variables.currency,
+      }) || g.currencies[0]
+    ).symbol
+  }
+
+  g.currencyFilter = () => {
+    if (g.currencies.length == 0) return
+    const select = $(CurrencyFilter())
+    // currnecy value for search in graphql
+    _.each(g.currencies, function(c) {
+      let value = c.search
+      select
+        .find('select')
+        .append(
+          CurrencyFilterOption(
+            value,
+            query.variables.currency,
+            c.name,
+            c.symbol
+          )
+        )
+    })
+    jqContainer.append(select)
+
+    select.find('select').on('change', function() {
+      let currencyAddress = $(this).val()
+
+      if (query.currencyType == 'number') {
+        currencyAddress = parseInt(currencyAddress)
+      }
+
+      query.request({
+        network: query.variables.network,
+        address: query.variables.address,
+        currency: currencyAddress,
+      })
+    })
+  }
+
   g.render = () => {
-    var margin = { x: 30, y: 30 }
-    var width = $(selector).width()
-    var height = 600
+    options.dependent
+      ? jqContainer
+          .parents('.card')
+          .find('.card-header')
+          .text(query.currentAddress + ' money flow')
+      : null
+
+    jqWrapper.removeClass('initializing')
+
+    g.currencies = options.currencies
+    g.setCurrency()
+
+    const topMenuMargin = 100
+    const width = $(selector).width()
+    const height = options.dependent ? 600 : 600 - topMenuMargin
     const edgeColor = 'path'
+    const textColor = options.theme == 'dark' ? 'white' : 'black'
+    const strokeColor = options.theme == 'dark' ? 'white' : 'black'
+    const linkOpacity = options.theme == 'dark' ? 1 : 0.85
 
     const prepareData = (sampleData) => {
       const prepareLinks = (data) => {
         const links = []
 
-        _.each(data.ethereum.inbound, (item) => {
+        _.each(data[query.cryptoCurrency].inbound, (item) => {
           links.push({
             source: item.sender.address,
             target: item.receiver.address,
             amount: item.amount,
-            // value: item.amount,
-            value: item.amount < 30 ? 30 : Math.pow(item.amount, 1 / 3),
+            value: item.amount,
           })
         })
 
-        _.each(data.ethereum.outbound, (item) => {
+        _.each(data[query.cryptoCurrency].outbound, (item) => {
           links.push({
             source: item.sender.address,
             target: item.receiver.address,
             amount: item.amount,
-            // value: item.amount,
-            value: item.amount < 30 ? 30 : Math.pow(item.amount, 1 / 3),
+            value: item.amount,
           })
         })
 
@@ -761,14 +866,14 @@ export function address_sankey(selector, query) {
       return {
         links,
         nodes,
-        units: 'ETH',
+        units: query.currency,
       }
     }
 
     const data = prepareData(query.data)
 
-    const colorSchemaOdd = d3.scaleOrdinal(d3.schemeCategory10.slice(0, 5))
-    const colorSchemaEven = d3.scaleOrdinal(d3.schemeCategory10.slice(5))
+    const colorSchemaOdd = d3.scaleOrdinal(d3.schemeCategory10.slice(5))
+    const colorSchemaEven = d3.scaleOrdinal(d3.schemeCategory10.slice(0, 5))
     const color = (d) => {
       return d.column % 2 == 0
         ? colorSchemaOdd(d.category === undefined ? d.name : d.category)
@@ -779,19 +884,17 @@ export function address_sankey(selector, query) {
       ? (d) => `${_n(d).format('0.0000a')} ${data.units}`
       : (d) => `${_n(d).format('0.0000a')}`
 
-    // const sankey = d3Sankey
     const sankey = d3Sankey
       .sankeyCircular()
       .nodeId((d) => d.name)
-      // .nodeAlign(d3[`sankey${align[0].toUpperCase()}${align.slice(1)}`])
       .nodeAlign(d3Sankey.sankeyJustify)
-      // .nodeAlign(d3Sankey.sankeyJustify)
       .nodeWidth(15)
-      // .nodePadding(6)
       .nodePaddingRatio(0.3)
       .circularLinkGap(2)
-      .extent([[width * 0.05, height * 0.1], [width * 0.95, height * 0.9]])
-    // .size([width - 2 * margin.x, height - 2 * margin.y])
+      .extent([
+        [(width - 60) * 0.05, (height - 60) * 0.1],
+        [(width - 60) * 0.95, (height - 60) * 0.9],
+      ])
 
     const graph = sankey(data)
 
@@ -799,21 +902,21 @@ export function address_sankey(selector, query) {
       .select(selector)
       .append('svg')
       .attr('viewBox', `0 0 ${width} ${height}`)
-    // .attr('width', width)
-    // .attr('height', height)
-    // .attr('width', width + margin.left + margin.right)
-    // .attr('height', height + margin.top + margin.bottom)
+      .attr(
+        'transform',
+        `translate(0,${options.dependent ? 0 : topMenuMargin})`
+      )
 
-    const g = svg.append('g').attr('transform', `translate(0,${margin.y})`)
+    const rootG = svg.append('g').attr('transform', 'translate(30, 30)')
 
-    const linkG = g
+    const linkG = rootG
       .append('g')
       .attr('class', 'links')
       .attr('fill', 'none')
-      .attr('stroke-opacity', 0.5)
+      .attr('stroke-opacity', linkOpacity)
       .selectAll('path')
 
-    const nodeG = g
+    const nodeG = rootG
       .append('g')
       .attr('class', 'nodes')
       .attr('font-family', 'sans-serif')
@@ -825,14 +928,24 @@ export function address_sankey(selector, query) {
       .enter()
       .append('g')
 
+    const tooltip = d3.select('.tooltip').empty()
+      ? d3
+          .select('body')
+          .append('div')
+          .attr(
+            'class',
+            options.theme == 'dark' ? 'tooltip tooltip--dark' : 'tooltip'
+          )
+      : d3.select('.tooltip')
+
     node
       .append('rect')
       .attr('x', (d) => d.x0)
-      .attr('y', (d) => d.y0)
-      .attr('height', (d) => d.y1 - d.y0)
+      .attr('y', (d) => (d.y1 - d.y0 < 1 ? d.y0 - 0.5 : d.y0))
+      .attr('height', (d) => (d.y1 - d.y0 < 1 ? 1 : d.y1 - d.y0))
       .attr('width', (d) => d.x1 - d.x0)
       .attr('fill', color)
-      .attr('stroke', 'black')
+      .attr('stroke', strokeColor)
       .attr('stroke-width', 0.5)
       .on('mouseover', (e, d) => {
         let thisName = d.name
@@ -848,32 +961,72 @@ export function address_sankey(selector, query) {
         node
           .selectAll('text')
           .style('opacity', (d) => highlightNodes(d, thisName))
+
+        let income = 0
+        _.each(d.targetLinks, (l) => {
+          income += l.amount
+        })
+        let outcome = 0
+        _.each(d.sourceLinks, (l) => {
+          outcome += l.amount
+        })
+
+        const text = `<p>${d.name}\nIncome: ${format(
+          income
+        )}\nOutcome: ${format(outcome)}</p>`
+
+        tooltip.style('visibility', 'visible').html(
+          `<ul>
+						<li>${d.name}</li>
+						<li>Income: ${format(income)}</li>
+						<li>Outcome: ${format(outcome)}</li>
+					</ul>`
+        )
       })
-      .on('mouseout', (d) => {
+      .on('mousemove', (e, d) => {
+        const bodyWidth = d3
+          .select('body')
+          .style('width')
+          .slice(0, -2)
+        const tooltipheight =
+          e.pageY - tooltip.style('height').slice(0, -2) - 10
+        const tooltipWidth = tooltip.style('width').slice(0, -2)
+        const tooltipX =
+          e.pageX < tooltipWidth / 2
+            ? 0
+            : e.pageX + tooltipWidth / 2 > bodyWidth
+            ? bodyWidth - tooltipWidth
+            : e.pageX - tooltipWidth / 2
+
+        tooltip
+          .style('top', tooltipheight + 'px')
+          .style('left', tooltipX + 'px')
+      })
+      .on('mouseout', (e, d) => {
         d3.selectAll('rect').style('opacity', 1)
-        d3.selectAll('.sankey-link').style('opacity', 0.7)
+        d3.selectAll('.sankey-link').style('opacity', linkOpacity)
         d3.selectAll('text').style('opacity', 1)
+        tooltip.style('visibility', 'hidden')
+      })
+      .on('contextmenu', (e, d) => {
+        e.preventDefault()
+        const pathname = window.location.pathname.slice(1)
+        window.open(
+          `${window.location.origin}/${pathname.slice(
+            0,
+            pathname.indexOf('/')
+          )}/address/${d.name}`,
+          '_blank'
+        )
       })
 
     node
       .append('text')
       .attr('x', (d) => (d.x0 + d.x1) / 2)
-      .attr('y', (d) => d.y0 - 2)
-      // .attr('dy', '0.35em')
+      .attr('y', (d) => d.y0 - 4)
       .attr('text-anchor', 'middle')
+      .attr('fill', textColor)
       .text((d) => d.name.slice(0, 10) + '...')
-
-    node.append('title').text((d) => {
-      let income = 0
-      _.each(d.targetLinks, (l) => {
-        income += l.amount
-      })
-      let outcome = 0
-      _.each(d.sourceLinks, (l) => {
-        outcome += l.amount
-      })
-      return `${d.name}\n${format(Math.max(income, outcome))}`
-    })
 
     const link = linkG
       .data(graph.links)
@@ -915,8 +1068,8 @@ export function address_sankey(selector, query) {
           : color(d.target)
       )
       .attr('stroke-width', (d) => Math.max(1, d.width))
-      .attr('opacity', 0.7)
-      .style('mix-blend-mode', 'multiply')
+      .attr('opacity', 1)
+      // .style('mix-blend-mode', 'multiply')
       .on('mouseover', (e, l) => {
         let source = l.source.name
         let target = l.target.name
@@ -932,19 +1085,44 @@ export function address_sankey(selector, query) {
         node.selectAll('text').style('opacity', (d) => {
           return d.name == source || d.name == target ? 1 : 0.3
         })
+
+        tooltip.style('visibility', 'visible').html(
+          `<ul>
+						<li>${l.source.name}</li>
+						<li>-></li>
+						<li>${l.target.name}</li>
+						<li>Amount: ${format(l.amount)}</li>
+					</ul>`
+        )
       })
-      .on('mouseout', (d) => {
+      .on('mousemove', (e, l) => {
+        const bodyWidth = d3
+          .select('body')
+          .style('width')
+          .slice(0, -2)
+        const tooltipheight =
+          e.pageY - tooltip.style('height').slice(0, -2) - 10
+        const tooltipWidth = tooltip.style('width').slice(0, -2)
+        const tooltipX =
+          e.pageX < tooltipWidth / 2
+            ? 0
+            : e.pageX + tooltipWidth / 2 > bodyWidth
+            ? bodyWidth - tooltipWidth
+            : e.pageX - tooltipWidth / 2
+
+        tooltip
+          .style('top', tooltipheight + 'px')
+          .style('left', tooltipX + 'px')
+      })
+      .on('mouseout', (e, l) => {
         d3.selectAll('rect').style('opacity', 1)
-        d3.selectAll('.sankey-link').style('opacity', 0.7)
+        d3.selectAll('.sankey-link').style('opacity', 1)
         d3.selectAll('text').style('opacity', 1)
+        tooltip.style('visibility', 'hidden')
       })
 
-    link
-      .append('title')
-      .text((d) => `${d.source.name} → ${d.target.name}\n${format(d.amount)}`)
-
-		let arrows = d3PathArrows
-			.pathArrows()
+    let arrows = d3PathArrows
+      .pathArrows()
       .arrowLength(10)
       .gapLength(150)
       .arrowHeadSize(4)
@@ -958,6 +1136,15 @@ export function address_sankey(selector, query) {
       .append('g')
       .attr('class', 'g-arrow')
       .call(arrows)
+
+    const pathArrowStyle = arrowsG
+      .select('path')
+      .attr('style')
+      .replace(/stroke: black;/, `stroke: ${strokeColor};`)
+
+    arrowsG.select('path').attr('style', pathArrowStyle)
+
+    arrowsG.selectAll('.arrow-head').attr('style', `fill: ${strokeColor}`)
 
     function highlightNodes(node, name) {
       let opacity = 0.3
@@ -981,80 +1168,13 @@ export function address_sankey(selector, query) {
 
     const chart = svg.node()
     $(selector).html(chart)
+    if (!options.dependent) {
+      g.detailLevel(query.variables.limit)
+      g.currencyFilter()
+    }
   }
 
+  window.onresize = g.render
   query.components.push(g)
   return g
 }
-
-
-
-// const queryInstance = new query(`
-// query ($network: EthereumNetwork!, $address: String!, $limit: Int!, $currency: String!, $from: ISO8601DateTime, $till: ISO8601DateTime) {
-//   ethereum(network: $network) {
-//     inbound: coinpath(receiver: {is: $address}, currency:{is: $currency}, options: {desc: "amount", limit: $limit}, date:{since: $from, till: $till}) {
-//       sender {
-//         address
-//         annotation
-//         smartContract {
-//           contractType
-//           currency {
-//             symbol
-//             name
-//           }
-//         }
-//       }
-//       receiver {
-//         address
-//         annotation
-//         smartContract {
-//           contractType
-//           currency {
-//             symbol
-//             name
-//           }
-//         }
-//       }
-//       amount
-//     }
-//     outbound: coinpath(sender: {is: $address}, currency:{is: $currency}, options: {desc: "amount", limit: $limit}, date:{since: $from, till: $till}) {
-//       sender {
-//         address
-//         annotation
-//         smartContract {
-//           contractType
-//           currency {
-//             symbol
-//             name
-//           }
-//         }
-//       }
-//       receiver {
-//         address
-//         annotation
-//         smartContract {
-//           contractType
-//           currency {
-//             symbol
-//             name
-//           }
-//         }
-//       }
-//       amount
-//     }
-//   }
-// }
-// `)
-// window.queryInstance = queryInstance
-// window.sankey = new address_sankey('#sankey-graph', queryInstance)
-
-// queryInstance.request({
-//   limit: 10,
-//   offset: 0,
-//   network: 'ethereum',
-//   address: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-//   currency: 'ETH',
-//   from: null,
-//   till: null,
-//   dateFormat: '%Y-%m',
-// })

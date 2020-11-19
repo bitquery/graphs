@@ -2,7 +2,7 @@
   z-index: 990;
 }
 
-#wrapper {
+.wrapper {
   position: relative;
   width: 100%;
   height: 600px;
@@ -22,7 +22,7 @@
   }
 }
 
-#graph {
+.graph {
   position: relative;
   width: 100%;
   height: 100%;
@@ -140,6 +140,35 @@
   }
 }
 
+.tooltip {
+	position: absolute;
+	opacity: 1;
+	visibility: hidden;
+	border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 5px;
+  padding: 10px;
+	background: white;
+	pointer-events: none;
+  ul {
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: black;
+	}
+	&--dark {
+		border-color: #343d46;
+		background: #343d46;
+		ul {
+			color: white;
+		}
+	}
+}
+
+.g-arrow {
+	pointer-events: none;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 .card.dark {
@@ -150,10 +179,10 @@
     background-color: #343d46;
     border-bottom-color: #343d46;
   }
-  #wrapper {
+  .wrapper {
     background: #434e57;
   }
-  #graph {
+  .graph {
     background: #434e57;
   }
   .request-loader {
@@ -190,38 +219,38 @@
   overflow: hidden;
 }
 .graph-bottom-menu {
-	display: flex;
-	flex-flow: column;
-	align-items: flex-end;
-	position: absolute;
+  display: flex;
+  flex-flow: column;
+  align-items: flex-end;
+  position: absolute;
   right: 20px;
-	bottom: 20px;
-	&__buttons {
-		display: flex;
-		margin-top: 5px;
-		margin-right: -5px;
-		a.badge {
-			color: #fff;
-			font-size: 60%;
-			cursor: pointer;
-		
-			display: inline-block;
-			padding: 0.25em 0.4em;
-			margin-right: 5px;
-			line-height: 1;
-			text-align: center;
-			white-space: nowrap;
-			vertical-align: baseline;
-		
-			&.badge-secondary {
-				background-color: #6c757d;
-			}
-		
-			&:hover {
-				color: #fff;
-			}
-		}
-	}
+  bottom: 20px;
+  &__buttons {
+    display: flex;
+    margin-top: 5px;
+    margin-right: -5px;
+    a.badge {
+      color: #fff;
+      font-size: 60%;
+      cursor: pointer;
+
+      display: inline-block;
+      padding: 0.25em 0.4em;
+      margin-right: 5px;
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: baseline;
+
+      &.badge-secondary {
+        background-color: #6c757d;
+      }
+
+      &:hover {
+        color: #fff;
+      }
+    }
+  }
 }
 .graph-modal {
   display: none;
@@ -233,7 +262,7 @@
   bottom: 0;
   z-index: 1050;
   background-color: rgba(0, 0, 0, 0.2);
-	.graph-modal-dialog {
+  .graph-modal-dialog {
     position: relative;
     margin: 30px auto;
 
@@ -290,8 +319,8 @@
         textarea {
           width: 100%;
           height: 100%;
-					resize: none;
-					border-color: #6c757d;
+          resize: none;
+          border-color: #6c757d;
         }
       }
 
@@ -310,16 +339,16 @@
         padding-top: 0px;
         padding-right: 24px;
         padding-bottom: 16px;
-				padding-left: 24px;
-				.btn.btn-default {
-					border: 1px solid #6c757d;
-				}
+        padding-left: 24px;
+        .btn.btn-default {
+          border: 1px solid #6c757d;
+        }
       }
-		}
-	}
-	.query-url:disabled {
-		background-color: white;
-	}
+    }
+  }
+  .query-url:disabled {
+    background-color: white;
+  }
   &.dark {
     .graph-modal-dialog {
       .graph-modal-content {
@@ -334,23 +363,23 @@
           color: #fff;
           textarea {
             background-color: #627079;
-						color: #fff;
-						border-color: #6c757d;
+            color: #fff;
+            border-color: #6c757d;
           }
         }
         .graph-modal-footer {
           .btn.btn-default {
             background-color: #212529;
-						color: #fff;
-						border: none;
+            color: #fff;
+            border: none;
           }
         }
       }
-		}
-		.query-url:disabled {
-			background-color: #434e57;
-		}
-	}
+    }
+    .query-url:disabled {
+      background-color: #434e57;
+    }
+  }
   &.graph-modal-shown {
     display: block;
   }
