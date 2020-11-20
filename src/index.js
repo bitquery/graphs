@@ -1069,7 +1069,6 @@ export function address_sankey(selector, query, options) {
       )
       .attr('stroke-width', (d) => Math.max(1, d.width))
       .attr('opacity', 1)
-      // .style('mix-blend-mode', 'multiply')
       .on('mouseover', (e, l) => {
         let source = l.source.name
         let target = l.target.name
