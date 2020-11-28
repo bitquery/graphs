@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import _n from 'numeral'
+import { setNumeralLocale } from './util/setNumeralLocale'
 
 import { Network, DataSet } from '../node_modules/vis'
 import { addInitializingLoader } from './addInitializingLoader'
@@ -18,6 +19,8 @@ import * as d3PathArrows from 'd3-path-arrows'
 import uid from './util/uid'
 
 import './style.scss'
+
+setNumeralLocale(_n)
 
 export function query(query) {
   return {
@@ -117,10 +120,10 @@ export function address_graph(selector, query, options) {
     jqContainer.parents('.card').addClass('dark')
   }
 
-  jqContainer
-    .parents('.card')
-    .find('.card-header')
-    .text(options.title || 'Default graph title')
+  // jqContainer
+  //   .parents('.card')
+  //   .find('.card-header')
+  //   .text(options.title || 'Default graph title')
 
   addInitializingLoader(jqWrapper, jqContainer)
 
@@ -137,6 +140,10 @@ export function address_graph(selector, query, options) {
         avoidOverlap: 0.1,
         springConstant: 0.09,
       },
+    },
+    interaction: {
+			hover: true,
+			hoverConnectedEdges: false,
     },
   }
 
@@ -564,26 +571,26 @@ export function address_graph(selector, query, options) {
 
     graphDetailLevel
       .find('input')
+      .on('input', function(e) {
+        val.html($(this).val())
+      })
       .on('mousedown', function(e) {
         $('body').append(val)
         val.css({ left: e.pageX - 20, top: e.pageY - 40 })
-        val.html($(this).val())
         $(this).on('mousemove', function(e) {
           val.css({ left: e.pageX - 20 })
-          val.html($(this).val())
         })
       })
       .on('mouseup', function(e) {
         val.remove()
         $(this).off('mousemove')
       })
-
-    graphDetailLevel.find('input').on('change', function(e) {
-      const variables = {
-        limit: parseInt($(this).val()),
-      }
-      query.request(variables)
-    })
+      .on('change', function(e) {
+        const variables = {
+          limit: parseInt($(this).val()),
+        }
+        query.request(variables)
+      })
   }
 
   g.editDetailLevel = (limit) => {
@@ -650,14 +657,35 @@ export function address_graph(selector, query, options) {
     g.setCurrency()
     g.setDataset()
 
-    g.network = new Network(g.container, g.dataset, g.networkOptions)
+		g.network = new Network(g.container, g.dataset, g.networkOptions)
+		
+		g.network.on('dragStart', function(params) {
+      g.network.canvas.body.container.style.cursor = 'pointer'
+    })
 
     g.network.on('dragEnd', (params) => {
+			g.network.canvas.body.container.style.cursor = 'default'
       const nodeId = params.nodes[0]
       const clickedNode = g.dataset.nodes.get(nodeId)
       clickedNode.physics = false
       g.dataset.nodes.update(clickedNode)
+		})
+
+		g.network.on('hold', function(params) {
+      g.network.canvas.body.container.style.cursor = 'pointer'
+		})
+		
+		g.network.on('release', function(params) {
+      g.network.canvas.body.container.style.cursor = 'default'
+		})
+		
+		g.network.on('hoverNode', function(params) {
+      g.network.canvas.body.container.style.cursor = 'pointer'
     })
+
+    g.network.on('blurNode', function(params) {
+      g.network.canvas.body.container.style.cursor = 'default'
+		})
 
     g.network.on('doubleClick', (params) => {
       if (params.nodes.length > 0) {
@@ -737,26 +765,26 @@ export function address_sankey(selector, query, options) {
 
     graphDetailLevel
       .find('input')
+      .on('input', function(e) {
+        val.html($(this).val())
+      })
       .on('mousedown', function(e) {
         $('body').append(val)
         val.css({ left: e.pageX - 20, top: e.pageY - 40 })
-        val.html($(this).val())
         $(this).on('mousemove', function(e) {
           val.css({ left: e.pageX - 20 })
-          val.html($(this).val())
         })
       })
       .on('mouseup', function(e) {
         val.remove()
         $(this).off('mousemove')
       })
-
-    graphDetailLevel.find('input').on('change', function(e) {
-      const variables = {
-        limit: parseInt($(this).val()),
-      }
-      query.request(variables)
-    })
+      .on('change', function(e) {
+        const variables = {
+          limit: parseInt($(this).val()),
+        }
+        query.request(variables)
+      })
   }
 
   g.editDetailLevel = (limit) => {
@@ -811,21 +839,26 @@ export function address_sankey(selector, query, options) {
   }
 
   g.render = () => {
-    options.dependent
-      ? jqContainer
-          .parents('.card')
-          .find('.card-header')
-          .text(query.currentAddress + ' money flow')
-      : null
+    // options.dependent
+    //   ? jqContainer
+    //       .parents('.card')
+    //       .find('.card-header')
+    //       .text(query.currentAddress + ' money flow')
+    //   : null
 
     jqWrapper.removeClass('initializing')
 
     g.currencies = options.currencies
     g.setCurrency()
 
-    const topMenuMargin = 100
-    const width = $(selector).width()
-    const height = options.dependent ? 600 : 600 - topMenuMargin
+    // const topMenuMargin = 100
+    const width = $(selector)
+      .parent()
+      .parent()
+      .parent()
+      .width()
+    // const height = options.dependent ? 600 : 600 - topMenuMargin
+    const height = 600
     const edgeColor = 'path'
     const textColor = options.theme == 'dark' ? 'white' : 'black'
     const strokeColor = options.theme == 'dark' ? 'white' : 'black'
@@ -833,7 +866,7 @@ export function address_sankey(selector, query, options) {
 
     const prepareData = (sampleData) => {
       const prepareLinks = (data) => {
-        const links = []
+        let links = []
 
         _.each(data[query.cryptoCurrency].inbound, (item) => {
           links.push({
@@ -853,15 +886,20 @@ export function address_sankey(selector, query, options) {
           })
         })
 
-        return links
+        return _.sortBy(links, 'value')
       }
 
       const links = prepareLinks(sampleData)
 
-      const nodes = Array.from(
+      let nodes = Array.from(
         new Set(links.flatMap((l) => [l.source, l.target])),
         (name) => ({ name })
       )
+      // console.log(nodes)
+      // const rootNode = nodes.splice(1, 1)
+      // console.log(rootNode)
+      // nodes.push(...rootNode)
+      // console.log(nodes)
 
       return {
         links,
@@ -871,6 +909,38 @@ export function address_sankey(selector, query, options) {
     }
 
     const data = prepareData(query.data)
+    // const data = {
+    //   nodes: [
+    //     { name: 'a' },
+    //     { name: 'b' },
+    //     { name: 'c' },
+    //     { name: 'd' },
+    //     { name: 'e' },
+    //     { name: 'f' },
+    //     { name: 'g' },
+    //     { name: 'h' },
+    //     { name: 'k' },
+    //   ],
+    //   links: [
+    // 		{ source: 'a', target: 'e', value: 500 },
+    // 		{ source: 'b', target: 'e', value: 3000 },
+    // 		{ source: 'c', target: 'e', value: 10000 },
+    // 		{ source: 'd', target: 'e', value: 100000 },
+    // 		{ source: 'e', target: 'f', value: 30 },
+    // 		{ source: 'e', target: 'g', value: 2500000 },
+    // 		{ source: 'e', target: 'h', value: 10 },
+    // 		{ source: 'e', target: 'd', value: 700000000 },
+    // 		{ source: 'e', target: 'b', value: 20 },
+    // 		{ source: 'e', target: 'a', value: 20 },
+    // 		{ source: 'e', target: 'k', value: 4000000000 },
+    // 		{ source: 'h', target: 'e', value: 20 },
+    // 		{ source: 'k', target: 'e', value: 30 },
+    // 		{ source: 'e', target: 'c', value: 30 },
+    // 	],
+    // 	units: 'ZZZ'
+    // }
+
+    console.log(data)
 
     const colorSchemaOdd = d3.scaleOrdinal(d3.schemeCategory10.slice(5))
     const colorSchemaEven = d3.scaleOrdinal(d3.schemeCategory10.slice(0, 5))
@@ -891,10 +961,12 @@ export function address_sankey(selector, query, options) {
       .nodeWidth(15)
       .nodePaddingRatio(0.3)
       .circularLinkGap(2)
-      .extent([
-        [(width - 60) * 0.05, (height - 60) * 0.1],
-        [(width - 60) * 0.95, (height - 60) * 0.9],
-      ])
+      // .extent([
+      //   [(width - 60) * 0.05, (height - 60) * 0.1],
+      //   [(width - 60) * 0.95, (height - 60) * 0.9],
+      // ])
+      .size([width, height])
+    g.sankey = sankey
 
     const graph = sankey(data)
 
@@ -902,12 +974,13 @@ export function address_sankey(selector, query, options) {
       .select(selector)
       .append('svg')
       .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr(
-        'transform',
-        `translate(0,${options.dependent ? 0 : topMenuMargin})`
-      )
+    // .attr(
+    //   'transform',
+    //   `translate(0,${options.dependent ? 0 : topMenuMargin})`
+    // )
 
-    const rootG = svg.append('g').attr('transform', 'translate(30, 30)')
+    const rootG = svg.append('g')
+    // .attr('transform', 'translate(30, 30)')
 
     const linkG = rootG
       .append('g')
@@ -971,10 +1044,6 @@ export function address_sankey(selector, query, options) {
           outcome += l.amount
         })
 
-        const text = `<p>${d.name}\nIncome: ${format(
-          income
-        )}\nOutcome: ${format(outcome)}</p>`
-
         tooltip.style('visibility', 'visible').html(
           `<ul>
 						<li>${d.name}</li>
@@ -1023,10 +1092,83 @@ export function address_sankey(selector, query, options) {
     node
       .append('text')
       .attr('x', (d) => (d.x0 + d.x1) / 2)
-      .attr('y', (d) => d.y0 - 4)
+      .attr('y', (d) => d.y0 - 2)
       .attr('text-anchor', 'middle')
       .attr('fill', textColor)
+      .attr('cursor', 'default')
       .text((d) => d.name.slice(0, 10) + '...')
+      .on('mouseover', (e, d) => {
+        let thisName = d.name
+
+        node
+          .selectAll('rect')
+          .style('opacity', (d) => highlightNodes(d, thisName))
+
+        d3.selectAll('.sankey-link').style('opacity', (l) =>
+          l.source.name == thisName || l.target.name == thisName ? 1 : 0.3
+        )
+
+        node
+          .selectAll('text')
+          .style('opacity', (d) => highlightNodes(d, thisName))
+
+        let income = 0
+        _.each(d.targetLinks, (l) => {
+          income += l.amount
+        })
+        let outcome = 0
+        _.each(d.sourceLinks, (l) => {
+          outcome += l.amount
+        })
+
+        // const text = `<p>${d.name}\nIncome: ${format(
+        //   income
+        // )}\nOutcome: ${format(outcome)}</p>`
+
+        tooltip.style('visibility', 'visible').html(
+          `<ul>
+						<li>${d.name}</li>
+						<li>Income: ${format(income)}</li>
+						<li>Outcome: ${format(outcome)}</li>
+					</ul>`
+        )
+      })
+      .on('mousemove', (e, d) => {
+        const bodyWidth = d3
+          .select('body')
+          .style('width')
+          .slice(0, -2)
+        const tooltipheight =
+          e.pageY - tooltip.style('height').slice(0, -2) - 10
+        const tooltipWidth = tooltip.style('width').slice(0, -2)
+        const tooltipX =
+          e.pageX < tooltipWidth / 2
+            ? 0
+            : e.pageX + tooltipWidth / 2 > bodyWidth
+            ? bodyWidth - tooltipWidth
+            : e.pageX - tooltipWidth / 2
+
+        tooltip
+          .style('top', tooltipheight + 'px')
+          .style('left', tooltipX + 'px')
+      })
+      .on('mouseout', (e, d) => {
+        d3.selectAll('rect').style('opacity', 1)
+        d3.selectAll('.sankey-link').style('opacity', linkOpacity)
+        d3.selectAll('text').style('opacity', 1)
+        tooltip.style('visibility', 'hidden')
+      })
+      .on('contextmenu', (e, d) => {
+        e.preventDefault()
+        const pathname = window.location.pathname.slice(1)
+        window.open(
+          `${window.location.origin}/${pathname.slice(
+            0,
+            pathname.indexOf('/')
+          )}/address/${d.name}`,
+          '_blank'
+        )
+      })
 
     const link = linkG
       .data(graph.links)
@@ -1164,6 +1306,32 @@ export function address_sankey(selector, query, options) {
 
       return opacity
     }
+
+    const zoom = d3
+      .zoom()
+      .on('zoom', function(e) {
+        rootG.attr('transform', e.transform)
+      })
+      .on('start', function(e) {
+        svg.attr('cursor', 'pointer')
+        tooltip.style('visibility', 'hidden')
+      })
+      .on('end', function(e) {
+        svg.attr('cursor', 'default')
+      })
+
+    svg
+      .call(zoom)
+      .call(zoom.transform, d3.zoomIdentity.translate(200, 80).scale(0.7))
+
+    // svg.call(d3.zoom()
+    // 	.extent([[0, 0], [width, height]])
+    // 	.scaleExtent([1, 8])
+    // 	.on('zoom', zoomed))
+
+    // function zoomed({ transform }) {
+    // 	g.attr('transform', transform)
+    // }
 
     const chart = svg.node()
     $(selector).html(chart)
