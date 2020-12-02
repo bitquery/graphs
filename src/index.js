@@ -120,11 +120,6 @@ export function address_graph(selector, query, options) {
     jqContainer.parents('.card').addClass('dark')
   }
 
-  // jqContainer
-  //   .parents('.card')
-  //   .find('.card-header')
-  //   .text(options.title || 'Default graph title')
-
   addInitializingLoader(jqWrapper, jqContainer)
 
   g.networkOptions = {
@@ -872,9 +867,72 @@ export function address_sankey(selector, query, options) {
     const strokeColor = options.theme == 'dark' ? 'white' : 'black'
     const linkOpacity = options.theme == 'dark' ? 1 : 0.85
 
-    const prepareData = (sampleData) => {
-      const prepareLinks = (data) => {
+    const prepareData = (data) => {
+      const getLabel = (node) => {
+        if (node.address == '0x0000000000000000000000000000000000000000') {
+          // 'coinbase'
+          return 'Coinbase'
+        } else if (
+          node.smartContract &&
+          node.smartContract.contractType == 'Generic'
+        ) {
+          // 'smart_contract'
+          return node.address
+        } else if (
+          node.smartContract &&
+          (node.smartContract.contractType == 'Token' ||
+            node.smartContract.contractType == 'TokenSale')
+        ) {
+          // 'token'
+          return (
+            node.smartContract.currency.name +
+            ' (' +
+            node.smartContract.currency.symbol +
+            ')'
+          )
+        } else if (
+          node.smartContract &&
+          node.smartContract.contractType == 'MarginPositionToken'
+        ) {
+          // 'MarginPositionToken'
+          return (
+            node.annotation ||
+            node.address
+          )
+        } else if (
+          node.smartContract &&
+          node.smartContract.contractType == 'Multisig'
+        ) {
+          // 'multisig'
+          return (
+            node.annotation ||
+            node.address
+          )
+        } else if (
+          node.smartContract &&
+          node.smartContract.contractType == 'DEX'
+        ) {
+          // 'dex'
+          return (
+            node.annotation ||
+            node.address
+          )
+        } else {
+          if (node.address == '') {
+            // 'coinbase'
+            return 'Coinbase'
+          } else if (node.annotation) {
+            // 'annotated_address'
+            return node.annotation
+          } else {
+            // 'address'
+            return node.address
+          }
+        }
+      }
+
         let links = []
+        let nodes = []
 
         _.each(data[query.cryptoCurrency].inbound, (item) => {
           links.push({
@@ -883,6 +941,8 @@ export function address_sankey(selector, query, options) {
             amount: item.amount,
             value: item.amount,
           })
+					nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
+					nodes.push({ id: item.receiver.address, label: getLabel(item.receiver) })
         })
 
         _.each(data[query.cryptoCurrency].outbound, (item) => {
@@ -892,28 +952,17 @@ export function address_sankey(selector, query, options) {
             amount: item.amount,
             value: item.amount,
           })
-        })
+					nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
+					nodes.push({ id: item.receiver.address, label: getLabel(item.receiver) })
+				})
+				
+				nodes = _.uniqBy(nodes, 'id')
 
-        return _.sortBy(links, 'value')
-      }
-
-      const links = prepareLinks(sampleData)
-
-      let nodes = Array.from(
-        new Set(links.flatMap((l) => [l.source, l.target])),
-        (name) => ({ name })
-      )
-      // console.log(nodes)
-      // const rootNode = nodes.splice(1, 1)
-      // console.log(rootNode)
-      // nodes.push(...rootNode)
-      // console.log(nodes)
-
-      return {
-        links,
-        nodes,
-        units: query.currency,
-      }
+			return {
+				links,
+				nodes, 
+				units: query.currency
+			}
     }
 
     const data = prepareData(query.data)
@@ -952,8 +1001,8 @@ export function address_sankey(selector, query, options) {
     const colorSchemaEven = d3.scaleOrdinal(d3.schemeCategory10.slice(0, 5))
     const color = (d) => {
       return d.column % 2 == 0
-        ? colorSchemaOdd(d.category === undefined ? d.name : d.category)
-        : colorSchemaEven(d.category === undefined ? d.name : d.category)
+        ? colorSchemaOdd(d.category === undefined ? d.id : d.category)
+        : colorSchemaEven(d.category === undefined ? d.id : d.category)
     }
 
     const format = data.units
@@ -962,7 +1011,7 @@ export function address_sankey(selector, query, options) {
 
     const sankey = d3Sankey
       .sankeyCircular()
-      .nodeId((d) => d.name)
+      .nodeId((d) => d.id)
       .nodeAlign(d3Sankey.sankeyJustify)
       .nodeWidth(15)
       .nodePadding(10)
@@ -976,6 +1025,7 @@ export function address_sankey(selector, query, options) {
     g.sankey = sankey
 
     const graph = sankey(data)
+    console.log(graph)
 
     const svg = d3
       .select(selector)
@@ -1033,9 +1083,7 @@ export function address_sankey(selector, query, options) {
       .attr('y', (d) => d.y0 - 4)
       .attr('text-anchor', 'middle')
       .attr('fill', textColor)
-      .attr('cursor', 'default')
-      .text((d) => d.name.slice(0, 10) + '...')
-      // .text((d) => d.name)
+      .text((d) => _.startsWith(d.label, '0x') ? _.truncate(d.label, { length: 15, separator: '...' }) : d.label)
       .on('mouseover', nodeMouseOver)
       .on('mousemove', nodeMouseMove)
       .on('mouseout', nodeMouseOut)
@@ -1106,19 +1154,19 @@ export function address_sankey(selector, query, options) {
 
     arrowsG.selectAll('.arrow-head').style('fill', strokeColor)
 
-    function highlightNodes(node, name) {
+    function highlightNodes(node, id) {
       let opacity = 0.3
 
-      if (node.name == name) {
+      if (node.id == id) {
         opacity = 1
       }
       node.sourceLinks.forEach(function(link) {
-        if (link.target.name == name) {
+        if (link.target.id == id) {
           opacity = 1
         }
       })
       node.targetLinks.forEach(function(link) {
-        if (link.source.name == name) {
+        if (link.source.id == id) {
           opacity = 1
         }
       })
@@ -1127,19 +1175,15 @@ export function address_sankey(selector, query, options) {
     }
 
     function nodeMouseOver(e, d) {
-      let thisName = d.name
+      let thisId = d.id
 
-      node
-        .selectAll('rect')
-        .style('opacity', (d) => highlightNodes(d, thisName))
+      node.selectAll('rect').style('opacity', (d) => highlightNodes(d, thisId))
 
       d3.selectAll('.sankey-link').style('opacity', (l) =>
-        l.source.name == thisName || l.target.name == thisName ? 1 : 0.3
+        l.source.id == thisId || l.target.id == thisId ? 1 : 0.3
       )
 
-      node
-        .selectAll('text')
-        .style('opacity', (d) => highlightNodes(d, thisName))
+      node.selectAll('text').style('opacity', (d) => highlightNodes(d, thisId))
 
       let income = 0
       _.each(d.targetLinks, (l) => {
@@ -1152,9 +1196,9 @@ export function address_sankey(selector, query, options) {
 
       tooltip.style('visibility', 'visible').html(
         `<ul>
-					<li>${d.name}</li>
 					<li>Income: ${format(income)}</li>
 					<li>Outcome: ${format(outcome)}</li>
+					<li>${d.label}</li>
 				</ul>`
       )
     }
@@ -1190,33 +1234,34 @@ export function address_sankey(selector, query, options) {
         `${window.location.origin}/${pathname.slice(
           0,
           pathname.indexOf('/')
-        )}/address/${d.name}`,
+        )}/address/${d.id}`,
         '_blank'
       )
     }
 
     function linkMouseOver(e, l) {
-      let source = l.source.name
-      let target = l.target.name
+      let source = l.source.id
+      let target = l.target.id
 
       d3.selectAll('.sankey-link').style('opacity', (l) =>
-        l.source.name == source && l.target.name == target ? 1 : 0.3
+        l.source.id == source && l.target.id == target ? 1 : 0.3
       )
 
       node.selectAll('rect').style('opacity', (d) => {
-        return d.name == source || d.name == target ? 1 : 0.3
+        return d.id == source || d.id == target ? 1 : 0.3
       })
 
       node.selectAll('text').style('opacity', (d) => {
-        return d.name == source || d.name == target ? 1 : 0.3
+        return d.id == source || d.id == target ? 1 : 0.3
       })
 
       tooltip.style('visibility', 'visible').html(
         `<ul>
-					<li>${l.source.name}</li>
-					<li>-></li>
-					<li>${l.target.name}</li>
 					<li>Amount: ${format(l.amount)}</li>
+					<li>From:</li>
+					<li>${l.source.label}</li>
+					<li>To:</li>
+					<li>${l.target.label}</li>
 				</ul>`
       )
     }
