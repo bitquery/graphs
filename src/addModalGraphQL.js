@@ -14,12 +14,12 @@ export const addModalGraphQL = (container, options, query) => {
 			<a class="badge badge-secondary open-btn">GraphQL</a>
 			<div class="graph-modal ${
         options.theme == 'dark' ? 'dark' : ''
-      }" id="graph-modal-gql" tabindex="-1">
+      } graph-modal-gql" tabindex="-1">
 					<div class="graph-modal-dialog">
 							<div class="graph-modal-content">
 									<div class="graph-modal-header">
 											<button type="button" class="graph-modal-close close-btn" >&times;</button>
-											<h4 class="graph-modal-title">${options.title}</h4>
+											<h4 class="graph-modal-title">Graph</h4>
 									</div>
 									<div class="graph-modal-url">
 											<div class="row">
@@ -31,7 +31,7 @@ export const addModalGraphQL = (container, options, query) => {
 													</div>
 											</div>
 									</div>
-									<div class="graph-modal-body" id="graph-graphiql">loading...</div>
+									<div class="graph-modal-body graph-graphiql">loading...</div>
 									<div class="graph-modal-footer">
 											<button type="button" class="btn btn-primary apply-btn">Apply changes</button>
 											<button type="button" class="btn btn-secondary revert-btn" style="display: none;">Revert changes</button>
@@ -74,7 +74,8 @@ export const addModalGraphQL = (container, options, query) => {
         },
         defaultVariableEditorOpen: true,
       }),
-      document.getElementById('graph-graphiql')
+      // document.getElementById('graph-graphiql')
+      modalGQL.find('.graph-graphiql')[0]
 		)
 		
 		const revertButton = modalGQL.find('.revert-btn')
@@ -102,7 +103,7 @@ export const addModalGraphQL = (container, options, query) => {
 
   const openModal = () => {
     $('body').addClass('graph-modal-open')
-		$('#graph-modal-gql').addClass('graph-modal-shown')
+		modalGQL.find('.graph-modal-gql').addClass('graph-modal-shown')
 
 		$('.query-url').val(query.url)
     if (window.g) {
@@ -113,19 +114,19 @@ export const addModalGraphQL = (container, options, query) => {
 
   const closeModal = () => {
     $('body').removeClass('graph-modal-open')
-    $('#graph-modal-gql').removeClass('graph-modal-shown')
+    modalGQL.find('.graph-modal-gql').removeClass('graph-modal-shown')
   }
 
   const applyChanges = () => {
 		query.url = $('.query-url').val().trim()
     $('body').removeClass('graph-modal-open')
-    $('#graph-modal-gql').removeClass('graph-modal-shown')
+    modalGQL.find('.graph-modal-gql').removeClass('graph-modal-shown')
     query.query = graphiql.query
     query.request(JSON.parse(graphiql.variables))
 	}
 	const revertChanges = () => {
     $('body').removeClass('graph-modal-open')
-		$('#graph-modal-gql').removeClass('graph-modal-shown')
+		modalGQL.find('.graph-modal-gql').removeClass('graph-modal-shown')
 		query.url = original.url
     query.query = original.query
     query.request(JSON.parse(original.variables))

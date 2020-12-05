@@ -32,11 +32,15 @@ export function query(query) {
       this.data = data
       this.cryptoCurrency = _.keys(data)[0]
 
+      _.each(this.controls, (controls) => {
+        controls.refresh()
+      })
       _.each(this.components, (component) => {
-        component.render(isExpand)
+        component.g.render(isExpand)
       })
     },
     components: [],
+    controls: [],
 
     url: 'https://graphql.bitquery.io',
     request: function(variables, isExpand = false, refresh = true) {
@@ -60,8 +64,9 @@ export function query(query) {
         .then((data) => {
           if (_.isEmpty(this.variables)) {
             this.variables = variables
-            this.currencyType = typeof variables.currency
+            this.currency = variables.currency || variables.network
           }
+          this.currencyType = typeof variables.currency
           this.currentAddress = variables.address
           if (refresh) _.merge(this.variables, variables)
           if (this.loading) {
@@ -74,17 +79,17 @@ export function query(query) {
 
     addLoader: function() {
       _.each(this.components, (component) => {
-        $(component.container)
+        $(component.g.container)
           .parent()
           .prepend(`<div class="request-loader"></div>`)
-        $(component.container).addClass('loading')
+        $(component.g.container).addClass('loading')
       })
     },
 
     removeLoader: function() {
       _.each(this.components, (component) => {
         $('.request-loader').remove()
-        $(component.container).removeClass('loading')
+        $(component.g.container).removeClass('loading')
       })
     },
   }
@@ -95,19 +100,22 @@ export function address_graph(selector, query, options) {
 
   g.container = document.querySelector(selector)
   const jqContainer = $(g.container)
+
+  query.JSCode
+    ? null
+    : (query.JSCode = jqContainer
+        .parents('.row')[0]
+        .outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`)
+        .replace(
+          /<script>/,
+          `  <link rel="stylesheet" media="all" href="https://cdn.jsdelivr.net/gh/bitquery/graphs@1/dist/graphs.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/bitquery/graphs@1/dist/graphs.min.js"></script>
+  <script>`
+        ))
+
   jqContainer.addClass('graph')
   jqContainer.wrap('<div class="wrapper">')
   const jqWrapper = jqContainer.parent('.wrapper')
-
-  g.JSCode = jqContainer
-    .parents('.row')[0]
-    .outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`)
-    .replace(
-      /<script>/,
-      `  <link rel="stylesheet" media="all" href="https://cdn.jsdelivr.net/gh/bitquery/graphs@1/dist/graphs.min.css">
-  <script src="https://cdn.jsdelivr.net/gh/bitquery/graphs@1/dist/graphs.min.js"></script>
-  <script>`
-    )
 
   // a trick for the icons in the graph to be loaded
   jqContainer.append(
@@ -140,19 +148,6 @@ export function address_graph(selector, query, options) {
       hover: true,
       hoverConnectedEdges: false,
     },
-  }
-
-  g.setCurrency = () => {
-    // currency value for label in graph
-    if (g.currencies.length == 0) {
-      query.currency = query.variables.network
-      return
-    }
-    query.currency = (
-      _.find(g.currencies, {
-        search: query.variables.currency,
-      }) || g.currencies[0]
-    ).symbol
   }
 
   g.hashCode = (data) => {
@@ -556,100 +551,8 @@ export function address_graph(selector, query, options) {
     }
   }
 
-  g.detailLevel = (limit) => {
-    const graphDetailLevel = $(DetailLevel(limit))
-    const val = $(DetailLevelPopup(g.theme))
-
-    jqContainer.append(graphDetailLevel)
-
-    graphDetailLevel.find('input').val(query.variables.limit)
-
-    graphDetailLevel
-      .find('input')
-      .on('input', function(e) {
-        val.html($(this).val())
-      })
-      .on('mousedown', function(e) {
-        $('body').append(val)
-        val.css({ left: e.pageX - 20, top: e.pageY - 40 })
-        $(this).on('mousemove', function(e) {
-          val.css({ left: e.pageX - 20 })
-        })
-      })
-      .on('mouseup', function(e) {
-        val.remove()
-        $(this).off('mousemove')
-      })
-      .on('change', function(e) {
-        const variables = {
-          limit: parseInt($(this).val()),
-        }
-        query.request(variables)
-      })
-  }
-
-  g.editDetailLevel = (limit) => {
-    $('.detail-level__input').val(limit)
-  }
-
-  g.currencyFilter = () => {
-    if (g.currencies.length == 0) return
-    const select = $(CurrencyFilter())
-    // currnecy value for search in graphql
-    _.each(g.currencies, function(c) {
-      let value = c.search
-      select
-        .find('select')
-        .append(
-          CurrencyFilterOption(
-            value,
-            query.variables.currency,
-            c.name,
-            c.symbol
-          )
-        )
-    })
-    jqContainer.append(select)
-
-    select.find('select').on('change', function() {
-      let currencyAddress = $(this).val()
-
-      if (query.currencyType == 'number') {
-        currencyAddress = parseInt(currencyAddress)
-      }
-
-      query.request({
-        network: query.variables.network,
-        address: query.variables.address,
-        currency: currencyAddress,
-      })
-    })
-  }
-
-  g.refreshCurrencyFilter = () => {
-    jqContainer.find('.currency-filter').remove()
-    g.currencyFilter()
-  }
-
-  g.createBottomMenu = () => {
-    const menu = $(`
-			<div class="graph-bottom-menu"></div>
-		`)
-    jqContainer.append(menu)
-
-    addFullScreenButton(menu, jqWrapper)
-
-    const buttonsBlock = $(`<div class="graph-bottom-menu__buttons"></div>`)
-    menu.append(buttonsBlock)
-
-    addModalJS(buttonsBlock, g.JSCode, options, query)
-    addModalGraphQL(buttonsBlock, options, query)
-  }
-
   g.initGraph = () => {
     jqWrapper.removeClass('initializing')
-    g.currencies = options.currencies
-    g.setCurrency()
     g.setDataset()
 
     g.network = new Network(g.container, g.dataset, g.networkOptions)
@@ -725,9 +628,9 @@ export function address_graph(selector, query, options) {
 
     g.expandNode(query.variables.address)
 
-    g.detailLevel(query.variables.limit)
-    g.currencyFilter()
-    g.createBottomMenu(options.buttons)
+    // g.detailLevel(query.variables.limit)
+    // g.currencyFilter()
+    // g.createBottomMenu(options.buttons)
   }
 
   g.render = (isExpand) => {
@@ -736,9 +639,6 @@ export function address_graph(selector, query, options) {
     if (!g.dataset) {
       g.initGraph()
     } else if (!isExpand) {
-      g.refreshCurrencyFilter()
-      g.setCurrency()
-      g.editDetailLevel(query.variables.limit)
       g.setDataset()
       g.expandNode(query.variables.address)
     } else {
@@ -746,7 +646,10 @@ export function address_graph(selector, query, options) {
     }
   }
 
-  query.components.push(g)
+  query.components.push({
+    id: selector,
+    g,
+  })
   return g
 }
 
@@ -755,6 +658,19 @@ export function address_sankey(selector, query, options) {
 
   g.container = document.querySelector(selector)
   const jqContainer = $(g.container)
+
+  query.JSCode
+    ? null
+    : (query.JSCode = jqContainer
+        .parents('.row')[0]
+        .outerHTML.replace(/queryWithTimeRange\(.*\)/, `query.request({})`)
+        .replace(
+          /<script>/,
+          `  <link rel="stylesheet" media="all" href="https://cdn.jsdelivr.net/gh/bitquery/graphs@1/dist/graphs.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/bitquery/graphs@1/dist/graphs.min.js"></script>
+  <script>`
+        ))
+
   jqContainer.addClass('graph')
   jqContainer.wrap('<div class="wrapper">')
   const jqWrapper = jqContainer.parent('.wrapper')
@@ -767,101 +683,17 @@ export function address_sankey(selector, query, options) {
 
   addInitializingLoader(jqWrapper, jqContainer)
 
-  g.detailLevel = (limit) => {
-    const graphDetailLevel = $(DetailLevel(limit))
-    const val = $(DetailLevelPopup(g.theme))
-
-    jqContainer.append(graphDetailLevel)
-
-    graphDetailLevel.find('input').val(query.variables.limit)
-
-    graphDetailLevel
-      .find('input')
-      .on('input', function(e) {
-        val.html($(this).val())
-      })
-      .on('mousedown', function(e) {
-        $('body').append(val)
-        val.css({ left: e.pageX - 20, top: e.pageY - 40 })
-        $(this).on('mousemove', function(e) {
-          val.css({ left: e.pageX - 20 })
-        })
-      })
-      .on('mouseup', function(e) {
-        val.remove()
-        $(this).off('mousemove')
-      })
-      .on('change', function(e) {
-        const variables = {
-          limit: parseInt($(this).val()),
-        }
-        query.request(variables)
-      })
-  }
-
-  g.editDetailLevel = (limit) => {
-    $('.detail-level__input').val(limit)
-  }
-
-  g.setCurrency = () => {
-    // currency value for label in graph
-    if (g.currencies.length == 0) {
-      query.currency = query.variables.network
-      return
-    }
-    query.currency = (
-      _.find(g.currencies, {
-        search: query.variables.currency,
-      }) || g.currencies[0]
-    ).symbol
-  }
-
-  g.currencyFilter = () => {
-    if (g.currencies.length == 0) return
-    const select = $(CurrencyFilter())
-    // currnecy value for search in graphql
-    _.each(g.currencies, function(c) {
-      let value = c.search
-      select
-        .find('select')
-        .append(
-          CurrencyFilterOption(
-            value,
-            query.variables.currency,
-            c.name,
-            c.symbol
-          )
-        )
-    })
-    jqContainer.append(select)
-
-    select.find('select').on('change', function() {
-      let currencyAddress = $(this).val()
-
-      if (query.currencyType == 'number') {
-        currencyAddress = parseInt(currencyAddress)
-      }
-
-      query.request({
-        network: query.variables.network,
-        address: query.variables.address,
-        currency: currencyAddress,
-      })
-    })
-  }
-
   g.render = () => {
     jqWrapper.removeClass('initializing')
-
-    g.currencies = options.currencies
-    g.setCurrency()
 
     const width = $(selector)
       .parent()
       .parent()
       .parent()
       .width()
-    const height = 600
+    const height = $(selector)
+      .parent()
+      .height()
     const edgeColor = 'path'
     const textColor = options.theme == 'dark' ? 'white' : 'black'
     const strokeColor = options.theme == 'dark' ? 'white' : 'black'
@@ -895,28 +727,19 @@ export function address_sankey(selector, query, options) {
           node.smartContract.contractType == 'MarginPositionToken'
         ) {
           // 'MarginPositionToken'
-          return (
-            node.annotation ||
-            node.address
-          )
+          return node.annotation || node.address
         } else if (
           node.smartContract &&
           node.smartContract.contractType == 'Multisig'
         ) {
           // 'multisig'
-          return (
-            node.annotation ||
-            node.address
-          )
+          return node.annotation || node.address
         } else if (
           node.smartContract &&
           node.smartContract.contractType == 'DEX'
         ) {
           // 'dex'
-          return (
-            node.annotation ||
-            node.address
-          )
+          return node.annotation || node.address
         } else {
           if (node.address == '') {
             // 'coinbase'
@@ -931,38 +754,44 @@ export function address_sankey(selector, query, options) {
         }
       }
 
-        let links = []
-        let nodes = []
+      let links = []
+      let nodes = []
 
-        _.each(data[query.cryptoCurrency].inbound, (item) => {
-          links.push({
-            source: item.sender.address,
-            target: item.receiver.address,
-            amount: item.amount,
-            value: item.amount,
-          })
-					nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
-					nodes.push({ id: item.receiver.address, label: getLabel(item.receiver) })
+      _.each(data[query.cryptoCurrency].inbound, (item) => {
+        links.push({
+          source: item.sender.address,
+          target: item.receiver.address,
+          amount: item.amount,
+          value: item.amount,
         })
+        nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
+        nodes.push({
+          id: item.receiver.address,
+          label: getLabel(item.receiver),
+        })
+      })
 
-        _.each(data[query.cryptoCurrency].outbound, (item) => {
-          links.push({
-            source: item.sender.address,
-            target: item.receiver.address,
-            amount: item.amount,
-            value: item.amount,
-          })
-					nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
-					nodes.push({ id: item.receiver.address, label: getLabel(item.receiver) })
-				})
-				
-				nodes = _.uniqBy(nodes, 'id')
+      _.each(data[query.cryptoCurrency].outbound, (item) => {
+        links.push({
+          source: item.sender.address,
+          target: item.receiver.address,
+          amount: item.amount,
+          value: item.amount,
+        })
+        nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
+        nodes.push({
+          id: item.receiver.address,
+          label: getLabel(item.receiver),
+        })
+      })
 
-			return {
-				links,
-				nodes, 
-				units: query.currency
-			}
+      nodes = _.uniqBy(nodes, 'id')
+
+      return {
+        links,
+        nodes,
+        units: query.currency,
+      }
     }
 
     const data = prepareData(query.data)
@@ -1014,7 +843,7 @@ export function address_sankey(selector, query, options) {
       .nodeId((d) => d.id)
       .nodeAlign(d3Sankey.sankeyJustify)
       .nodeWidth(15)
-      .nodePadding(10)
+      .nodePadding(16)
       // .nodePaddingRatio(0.3)
       .circularLinkGap(4)
       // .extent([
@@ -1025,12 +854,13 @@ export function address_sankey(selector, query, options) {
     g.sankey = sankey
 
     const graph = sankey(data)
-    console.log(graph)
 
     const svg = d3
       .select(selector)
       .append('svg')
-      .attr('viewBox', `0 0 ${width} ${height}`)
+      // .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('width', '100%')
+      .attr('height', '100%')
 
     const rootG = svg.append('g')
 
@@ -1083,7 +913,11 @@ export function address_sankey(selector, query, options) {
       .attr('y', (d) => d.y0 - 4)
       .attr('text-anchor', 'middle')
       .attr('fill', textColor)
-      .text((d) => _.startsWith(d.label, '0x') ? _.truncate(d.label, { length: 15, separator: '...' }) : d.label)
+      .text((d) =>
+        _.startsWith(d.label, '0x') || _.indexOf(d.label, ' ') == -1
+          ? _.truncate(d.label, { length: 15, separator: '...' })
+          : d.label
+      )
       .on('mouseover', nodeMouseOver)
       .on('mousemove', nodeMouseMove)
       .on('mouseout', nodeMouseOut)
@@ -1314,13 +1148,144 @@ export function address_sankey(selector, query, options) {
 
     const chart = svg.node()
     $(selector).html(chart)
-    if (!options.dependent) {
-      g.detailLevel(query.variables.limit)
-      g.currencyFilter()
-    }
   }
 
-  window.onresize = g.render
-  query.components.push(g)
+  // window.onresize = g.render
+  query.components.push({
+    id: selector,
+    g,
+  })
   return g
+}
+
+export function addControls(selector, query, options) {
+  const controls = {}
+  const jqContainer = $(selector)
+  const jqWrapper = jqContainer.parent('.wrapper')
+
+  controls.currencies = options.currencies
+  controls.theme = options.theme
+
+  controls.setCurrency = () => {
+    // if (controls.currencies.length == 0) {
+    //   query.currency = query.variables.network
+    // } else {
+      query.currency = (
+        _.find(controls.currencies, {
+          search: query.variables.currency,
+        }) || controls.currencies[0]
+      ).symbol
+    // }
+  }
+
+  controls.detailLevel = () => {
+    const graphDetailLevel = $(DetailLevel(query.variables.limit))
+    const val = $(DetailLevelPopup(controls.theme))
+
+    // jqContainer.append(graphDetailLevel)
+    jqWrapper.append(graphDetailLevel)
+
+    graphDetailLevel.find('input').val(query.variables.limit)
+
+    graphDetailLevel
+      .find('input')
+      .on('input', function(e) {
+        val.html($(this).val())
+      })
+      .on('mousedown', function(e) {
+        $('body').append(val)
+        val.html($(this).val())
+        val.css({ left: e.pageX - 20, top: e.pageY - 40 })
+        $(this).on('mousemove', function(e) {
+          val.css({ left: e.pageX - 20 })
+        })
+      })
+      .on('mouseup', function(e) {
+        val.remove()
+        $(this).off('mousemove')
+      })
+      .on('change', function(e) {
+        const variables = {
+          limit: parseInt($(this).val()),
+        }
+        query.request(variables)
+      })
+  }
+
+  controls.editDetailLevel = () => {
+    // jqContainer.find('.detail-level__input').val(query.variables.limit)
+    jqWrapper.find('.detail-level__input').val(query.variables.limit)
+  }
+
+  controls.currencyFilter = () => {
+    if (controls.currencies.length == 0) return
+    const select = $(CurrencyFilter())
+    // currnecy value for search in graphql
+    _.each(controls.currencies, function(c) {
+      let value = c.search
+      select
+        .find('select')
+        .append(
+          CurrencyFilterOption(
+            value,
+            query.variables.currency,
+            c.name,
+            c.symbol
+          )
+        )
+    })
+    // jqContainer.append(select)
+    jqWrapper.append(select)
+
+    select.find('select').on('change', function() {
+      let currencyAddress = $(this).val()
+
+      if (query.currencyType == 'number') {
+        currencyAddress = parseInt(currencyAddress)
+      }
+
+      query.request({
+        network: query.variables.network,
+        address: query.variables.address,
+        currency: currencyAddress,
+      })
+    })
+  }
+
+  controls.refreshCurrencyFilter = () => {
+    // jqContainer.find('.currency-filter').remove()
+    jqWrapper.find('.currency-filter').remove()
+    controls.currencyFilter()
+  }
+
+  controls.createBottomMenu = () => {
+    const menu = $(`<div class="graph-bottom-menu"></div>`)
+    // jqContainer.append(menu)
+    jqWrapper.append(menu)
+
+    addFullScreenButton(menu, jqWrapper)
+
+    const buttonsBlock = $(`<div class="graph-bottom-menu__buttons"></div>`)
+    menu.append(buttonsBlock)
+
+    addModalJS(buttonsBlock, query.JSCode, options, query)
+    addModalGraphQL(buttonsBlock, options, query)
+  }
+
+  controls.refresh = () => {
+    controls.setCurrency()
+    controls.editDetailLevel()
+    controls.refreshCurrencyFilter()
+  }
+
+  $('body').on('DOMSubtreeModified', selector, function render() {
+    controls.setCurrency()
+    controls.detailLevel()
+    controls.currencyFilter()
+    controls.createBottomMenu()
+    $('body').off('DOMSubtreeModified', render)
+  })
+
+  query.controls.push(controls)
+  return controls
 }
