@@ -8,6 +8,7 @@ import { CurrencyFilter } from './components/CurrencyFilter'
 import { CurrencyFilterOption } from './components/CurrencyFilterOption'
 import { DetailLevel } from './components/DetailLevel'
 import { DetailLevelPopup } from './components/DetailLevelPopup'
+import { DepthLevel } from './components/DepthLevel'
 import { addFullScreenButton } from './addFullScreenButton'
 import { lightenOrDarkenColor } from './util/lightenOrDarkenColor'
 import { addModalJS } from './addModalJS'
@@ -19,6 +20,7 @@ import * as d3PathArrows from 'd3-path-arrows'
 import uid from './util/uid'
 
 import './style.scss'
+import { path } from 'd3'
 
 setNumeralLocale(_n)
 
@@ -698,6 +700,7 @@ export function address_sankey(selector, query, options) {
     const textColor = options.theme == 'dark' ? 'white' : 'black'
     const strokeColor = options.theme == 'dark' ? 'white' : 'black'
     const linkOpacity = options.theme == 'dark' ? 1 : 0.85
+    const fontSize = 12
 
     const prepareData = (data) => {
       const getLabel = (node) => {
@@ -797,15 +800,15 @@ export function address_sankey(selector, query, options) {
     const data = prepareData(query.data)
     // const data = {
     //   nodes: [
-    //     { name: 'a' },
-    //     { name: 'b' },
-    //     { name: 'c' },
-    //     { name: 'd' },
-    //     { name: 'e' },
-    //     { name: 'f' },
-    //     { name: 'g' },
-    //     { name: 'h' },
-    //     { name: 'k' },
+    //     { id: 'a', column: 0},
+    //     { id: 'b',  column: 0 },
+    //     { id: 'c',  column: 0 },
+    //     { id: 'd',  column: 1 },
+    //     { id: 'e', column: 1 },
+    //     { id: 'f', column: 2 },
+    //     { id: 'g', column: 2 },
+    //     { id: 'h', column: 2 },
+    //     { id: 'k', column: 3 },
     //   ],
     //   links: [
     // 		{ source: 'a', target: 'e', value: 500 },
@@ -842,18 +845,174 @@ export function address_sankey(selector, query, options) {
       .sankeyCircular()
       .nodeId((d) => d.id)
       .nodeAlign(d3Sankey.sankeyJustify)
-      .nodeWidth(15)
-      .nodePadding(16)
-      // .nodePaddingRatio(0.3)
-      .circularLinkGap(4)
+      .nodeWidth(50)
+      // .nodePadding(400)
+      .nodePaddingRatio(0.7)
+      .circularLinkGap(15)
       // .extent([
       //   [(width - 60) * 0.05, (height - 60) * 0.1],
       //   [(width - 60) * 0.95, (height - 60) * 0.9],
       // ])
-      .size([width, height])
+      .size([3200, 1800])
+
     g.sankey = sankey
 
     const graph = sankey(data)
+    console.log(graph)
+
+    function getAllPaths(graph) {
+      const rootNode = _.find(graph.nodes, { id: query.variables.address })
+      // const rootNode = _.find(graph.nodes, { id: 'e' })
+
+      // const paths = []
+      // function addSourceNodeToPath(node, path) {
+      //   path.push(node.id)
+      //   if (node.id == rootNode.id || node.sourceLinks.length == 0) {
+      //     paths.push(path)
+      //   } else {
+      //     _.forEach(node.sourceLinks, (l) => {
+      //       const pathCopy = [...path]
+      //       if (l.target.id == rootNode.id || !_.includes(path, l.target.id)) {
+      //         addSourceNodeToPath(l.target, pathCopy)
+      //       } else {
+      //         paths.push(path)
+      //       }
+      //     })
+      //   }
+      // }
+
+      // _.forEach(rootNode.sourceLinks, (l) => {
+      //   const path = [rootNode.id]
+      //   addSourceNodeToPath(l.target, path)
+      // })
+
+      // const pathsToRootNode = []
+      // function addTargetNodeToPath(node, path) {
+      //   path.push(node.id)
+      //   if (node.id == rootNode.id) {
+      //     return
+      //   } else if (node.targetLinks.length == 0) {
+      //     pathsToRootNode.push(path.reverse())
+      //   } else {
+      //     _.forEach(node.targetLinks, (l) => {
+      //       const pathCopy = [...path]
+      //       if (!_.includes(path, l.source.id)) {
+      //         addTargetNodeToPath(l.source, pathCopy)
+      //       } else {
+      // 				return
+      //       }
+      //     })
+      //   }
+      // }
+
+      // _.forEach(rootNode.targetLinks, (l) => {
+      //   const path = [rootNode.id]
+      //   addTargetNodeToPath(l.source, path)
+      // })
+
+      // return _.concat(paths, pathsToRootNode)
+
+      const pathsFromRootToNodes = []
+      function addSourceNodeToPath(node, path) {
+        if (node.id == rootNode.id || _.includes(path, node.id)) {
+          if (!isDuplicate(pathsFromRootToNodes, path)) {
+            pathsFromRootToNodes.push([...path])
+          }
+        } else if (node.sourceLinks.length == 0) {
+          path.push(node.id)
+          if (!isDuplicate(pathsFromRootToNodes, path)) {
+            pathsFromRootToNodes.push([...path])
+          }
+        } else {
+          path.push(node.id)
+          if (!isDuplicate(pathsFromRootToNodes, path)) {
+            pathsFromRootToNodes.push([...path])
+          }
+          _.forEach(node.sourceLinks, (l) => {
+            addSourceNodeToPath(l.target, [...path])
+          })
+        }
+      }
+
+      _.forEach(rootNode.sourceLinks, (l) => {
+        const path = [rootNode.id]
+        addSourceNodeToPath(l.target, path)
+      })
+
+      const pathsFromNodesToRoot = []
+      function addTargetNodeToPath(node, path) {
+        if (node.id == rootNode.id || _.includes(path, node.id)) {
+          if (!isDuplicate(pathsFromNodesToRoot, [...path].reverse())) {
+            pathsFromNodesToRoot.push([...path].reverse())
+          }
+        } else if (node.targetLinks.length == 0) {
+          path.push(node.id)
+          if (!isDuplicate(pathsFromNodesToRoot, [...path].reverse())) {
+            pathsFromNodesToRoot.push([...path].reverse())
+          }
+        } else {
+          path.push(node.id)
+          if (!isDuplicate(pathsFromNodesToRoot, [...path].reverse())) {
+            pathsFromNodesToRoot.push([...path].reverse())
+          }
+          _.forEach(node.targetLinks, (l) => {
+            const pathCopy = [...path]
+            addTargetNodeToPath(l.source, pathCopy)
+          })
+        }
+      }
+
+      _.forEach(rootNode.targetLinks, (l) => {
+        const path = [rootNode.id]
+        addTargetNodeToPath(l.source, path)
+      })
+
+      return _.concat(pathsFromRootToNodes, pathsFromNodesToRoot)
+		}
+		
+		const allPaths = getAllPaths(graph)
+    console.log(allPaths)
+
+    function isDuplicate(arrays, arr) {
+      return _.some(arrays, (a) => {
+        return _.isEqual(arr, a)
+      })
+    }
+
+    function getPaths(nodeId, allPaths, toNode = true) {
+      const paths = []
+      _.forEach(allPaths, (p) => {
+        const direction = toNode ? p.length - 1 : 0
+        if (_.indexOf(p, nodeId) == direction) {
+          paths.push(p)
+        }
+      })
+      return paths
+    }
+
+    function getDataToHighlight(nodes, allPaths) {
+      const dataToHighlight = {}
+
+      _.forEach(nodes, (n) => {
+				// что подсвечивать: от рутового или до или все вместе
+				const paths = _.concat(getPaths(n.id, allPaths), getPaths(n.id, allPaths, false))
+
+        const nodesToHighlight = _.uniq(_.flattenDeep(paths))
+        const linksToHighlight = []
+        _.forEach(paths, (p) => {
+          for (let i = 0; i < p.length - 1; i++) {
+            const couple = [p[i], p[i + 1]]
+            if (!isDuplicate(linksToHighlight, couple)) {
+              linksToHighlight.push(couple)
+            }
+          }
+        })
+        dataToHighlight[n.id] = { nodesToHighlight, linksToHighlight }
+      })
+      return dataToHighlight
+    }
+
+    const dataToHighlight = getDataToHighlight(graph.nodes, allPaths)
 
     const svg = d3
       .select(selector)
@@ -875,7 +1034,7 @@ export function address_sankey(selector, query, options) {
       .append('g')
       .attr('class', 'nodes')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 14)
+      .attr('font-size', fontSize)
       .selectAll('g')
 
     const node = nodeG
@@ -897,11 +1056,13 @@ export function address_sankey(selector, query, options) {
       .append('rect')
       .attr('x', (d) => d.x0)
       .attr('y', (d) => (d.y1 - d.y0 < 1 ? d.y0 - 0.5 : d.y0))
+      // .attr('y', (d) => d.y0)
       .attr('height', (d) => (d.y1 - d.y0 < 1 ? 1 : d.y1 - d.y0))
+      // .attr('height', (d) => d.y1 - d.y0)
       .attr('width', (d) => d.x1 - d.x0)
       .attr('fill', color)
       .attr('stroke', strokeColor)
-      .attr('stroke-width', 0.5)
+      .attr('stroke-width', 1)
       .on('mouseover', nodeMouseOver)
       .on('mousemove', nodeMouseMove)
       .on('mouseout', nodeMouseOut)
@@ -988,34 +1149,79 @@ export function address_sankey(selector, query, options) {
 
     arrowsG.selectAll('.arrow-head').style('fill', strokeColor)
 
+    // function highlightNodes(node, id) {
+    //   let opacity = 0.3
+
+    //   if (node.id == id) {
+    //     opacity = 1
+    //   }
+    //   node.sourceLinks.forEach(function(link) {
+    //     if (link.target.id == id) {
+    //       opacity = 1
+    //     }
+    //   })
+    //   node.targetLinks.forEach(function(link) {
+    //     if (link.source.id == id) {
+    //       opacity = 1
+    //     }
+    //   })
+
+    //   return opacity
+    // }
     function highlightNodes(node, id) {
       let opacity = 0.3
 
-      if (node.id == id) {
+      if (_.includes(dataToHighlight[id].nodesToHighlight, node.id)) {
         opacity = 1
       }
-      node.sourceLinks.forEach(function(link) {
-        if (link.target.id == id) {
-          opacity = 1
-        }
-      })
-      node.targetLinks.forEach(function(link) {
-        if (link.source.id == id) {
-          opacity = 1
-        }
-      })
 
       return opacity
-    }
+		}
+		
+		function highlightLinks(link, id) {
+			const highlight = _.some(
+				dataToHighlight[id].linksToHighlight,
+				(couple) => {
+					return link.source.id == couple[0] && link.target.id == couple[1]
+				}
+			)
+			return highlight ? 1 : 0.3
+		}
 
+    // function nodeMouseOver(e, d) {
+    //   let thisId = d.id
+
+    //   node.selectAll('rect').style('opacity', (d) => highlightNodes(d, thisId))
+
+    //   d3.selectAll('.sankey-link').style('opacity', (l) =>
+    //     l.source.id == thisId || l.target.id == thisId ? 1 : 0.3
+    //   )
+
+    //   node.selectAll('text').style('opacity', (d) => highlightNodes(d, thisId))
+
+    //   let income = 0
+    //   _.each(d.targetLinks, (l) => {
+    //     income += l.amount
+    //   })
+    //   let outcome = 0
+    //   _.each(d.sourceLinks, (l) => {
+    //     outcome += l.amount
+    //   })
+
+    //   tooltip.style('visibility', 'visible').html(
+    //     `<ul>
+    // 			${income != 0 ? `<li>Income: ${format(income)}</li>` : ''}
+    // 			${outcome != 0 ? `<li>Outcome: ${format(outcome)}</li>` : ''}
+    // 			<li>${d.label}</li>
+    // 		</ul>`
+    //   )
+    // }
     function nodeMouseOver(e, d) {
       let thisId = d.id
 
       node.selectAll('rect').style('opacity', (d) => highlightNodes(d, thisId))
 
-      d3.selectAll('.sankey-link').style('opacity', (l) =>
-        l.source.id == thisId || l.target.id == thisId ? 1 : 0.3
-      )
+      d3.selectAll('.sankey-link').style('opacity', (l) => highlightLinks(l, thisId))
 
       node.selectAll('text').style('opacity', (d) => highlightNodes(d, thisId))
 
@@ -1030,8 +1236,8 @@ export function address_sankey(selector, query, options) {
 
       tooltip.style('visibility', 'visible').html(
         `<ul>
-					<li>Income: ${format(income)}</li>
-					<li>Outcome: ${format(outcome)}</li>
+					${income != 0 ? `<li>Income: ${format(income)}</li>` : ''}
+					${outcome != 0 ? `<li>Outcome: ${format(outcome)}</li>` : ''}
 					<li>${d.label}</li>
 				</ul>`
       )
@@ -1127,6 +1333,7 @@ export function address_sankey(selector, query, options) {
     const zoom = d3
       .zoom()
       .on('zoom', function(e) {
+        rootG.select('.nodes').attr('font-size', fontSize / e.transform.k)
         rootG.attr('transform', e.transform)
       })
       .on('start', function(e) {
@@ -1143,7 +1350,7 @@ export function address_sankey(selector, query, options) {
 
     svg
       .call(zoom)
-      .call(zoom.transform, d3.zoomIdentity.translate(200, 80).scale(0.7))
+      .call(zoom.transform, d3.zoomIdentity.translate(200, 80).scale(0.25))
       .on('dblclick.zoom', null)
 
     const chart = svg.node()
@@ -1167,22 +1374,17 @@ export function addControls(selector, query, options) {
   controls.theme = options.theme
 
   controls.setCurrency = () => {
-    // if (controls.currencies.length == 0) {
-    //   query.currency = query.variables.network
-    // } else {
-      query.currency = (
-        _.find(controls.currencies, {
-          search: query.variables.currency,
-        }) || controls.currencies[0]
-      ).symbol
-    // }
+    query.currency = (
+      _.find(controls.currencies, {
+        search: query.variables.currency,
+      }) || controls.currencies[0]
+    ).symbol
   }
 
   controls.detailLevel = () => {
     const graphDetailLevel = $(DetailLevel(query.variables.limit))
     const val = $(DetailLevelPopup(controls.theme))
 
-    // jqContainer.append(graphDetailLevel)
     jqWrapper.append(graphDetailLevel)
 
     graphDetailLevel.find('input').val(query.variables.limit)
@@ -1258,6 +1460,28 @@ export function addControls(selector, query, options) {
     controls.currencyFilter()
   }
 
+  controls.depthLevel = () => {
+    const graphDepthLevel = $(
+      DepthLevel(query.variables.inboundDepth, query.variables.outboundDepth)
+    )
+
+    jqWrapper.append(graphDepthLevel)
+
+    graphDepthLevel.find('input').on('change', function(e) {
+      const value = parseInt($(this).val())
+      const variables =
+        e.target.id == 'inbound-level'
+          ? { inboundDepth: value }
+          : { outboundDepth: value }
+      query.request(variables)
+    })
+  }
+
+  controls.refreshDepthLevel = () => {
+    jqWrapper.find('.depth-level').remove()
+    controls.depthLevel()
+  }
+
   controls.createBottomMenu = () => {
     const menu = $(`<div class="graph-bottom-menu"></div>`)
     // jqContainer.append(menu)
@@ -1276,12 +1500,14 @@ export function addControls(selector, query, options) {
     controls.setCurrency()
     controls.editDetailLevel()
     controls.refreshCurrencyFilter()
+    controls.refreshDepthLevel()
   }
 
   $('body').on('DOMSubtreeModified', selector, function render() {
     controls.setCurrency()
     controls.detailLevel()
     controls.currencyFilter()
+    controls.depthLevel()
     controls.createBottomMenu()
     $('body').off('DOMSubtreeModified', render)
   })

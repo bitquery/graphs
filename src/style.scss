@@ -135,6 +135,17 @@
   }
 }
 
+.depth-level {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%);
+  max-width: 30%;
+  &__input {
+    margin: 0 10px 0 5px;
+  }
+}
+
 .fullscreen-button {
   // position: absolute;
   // right: 20px;
