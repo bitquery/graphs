@@ -2,7 +2,7 @@ import _ from 'lodash'
 import _n from 'numeral'
 import { setNumeralLocale } from './util/setNumeralLocale'
 
-import { Network, DataSet } from '../node_modules/vis'
+import { Network, DataSet, nl_NL } from '../node_modules/vis'
 import { addInitializingLoader } from './addInitializingLoader'
 import { CurrencyFilter } from './components/CurrencyFilter'
 import { CurrencyFilterOption } from './components/CurrencyFilterOption'
@@ -15,7 +15,8 @@ import { addModalJS } from './addModalJS'
 import { addModalGraphQL } from './addModalGraphQL'
 
 import * as d3 from 'd3'
-import * as d3Sankey from 'd3-sankey-circular'
+// import * as d3Sankey from 'd3-sankey-circular'
+import * as d3Sankey from '../../d3-sankey-circular/dist/d3-sankey-circular'
 import * as d3PathArrows from 'd3-path-arrows'
 import uid from './util/uid'
 
@@ -702,6 +703,22 @@ export function address_sankey(selector, query, options) {
     const linkOpacity = options.theme == 'dark' ? 1 : 0.85
     const fontSize = 12
 
+    const svg = d3
+      .select(selector)
+      .append('svg')
+      // .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('width', '100%')
+      .attr('height', '100%')
+
+		// Exit if data is empty
+    if (
+      !query.data[query.cryptoCurrency].inbound &&
+      !query.data[query.cryptoCurrency].outbound
+    ) {
+      jqContainer.html(svg.node())
+      return
+    }
+
     const prepareData = (data) => {
       const getLabel = (node) => {
         if (node.address == '0x0000000000000000000000000000000000000000') {
@@ -765,12 +782,24 @@ export function address_sankey(selector, query, options) {
           source: item.sender.address,
           target: item.receiver.address,
           amount: item.amount,
-          value: item.amount,
+					value: item.amount,
+					countOfTransfers: item.count,
         })
-        nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
+        nodes.push({
+          id: item.sender.address,
+          label: getLabel(item.sender),
+          depthLevel:
+            item.sender.address == query.variables.address ? 0 : -item.depth,
+          valueFromOneLink: item.amount,
+        })
         nodes.push({
           id: item.receiver.address,
           label: getLabel(item.receiver),
+          depthLevel:
+            item.receiver.address == query.variables.address
+              ? 0
+              : -item.depth + 1,
+          valueFromOneLink: item.amount,
         })
       })
 
@@ -779,16 +808,32 @@ export function address_sankey(selector, query, options) {
           source: item.sender.address,
           target: item.receiver.address,
           amount: item.amount,
-          value: item.amount,
+					value: item.amount,
+					countOfTransfers: item.count,
         })
-        nodes.push({ id: item.sender.address, label: getLabel(item.sender) })
+        nodes.push({
+          id: item.sender.address,
+          label: getLabel(item.sender),
+          depthLevel:
+            item.sender.address == query.variables.address ? 0 : item.depth - 1,
+          valueFromOneLink: item.amount,
+        })
         nodes.push({
           id: item.receiver.address,
           label: getLabel(item.receiver),
+          depthLevel:
+            item.receiver.address == query.variables.address ? 0 : item.depth,
+          valueFromOneLink: item.amount,
         })
       })
 
-      nodes = _.uniqBy(nodes, 'id')
+      nodes = _.uniqBy(
+        _.sortBy(nodes, [(n) => -n.valueFromOneLink, (n) => n.depthLevel ** 2]),
+        'id'
+      )
+      // nodes = _.uniqBy(_.sortBy(nodes, (n) => n.valueFromOneLink), 'id')
+      // nodes = _.uniqBy(_.sortBy(nodes, (n) => n.depthLevel * n.depthLevel).reverse(), 'id')
+      // nodes = _.uniqBy(nodes, 'id')
 
       return {
         links,
@@ -844,7 +889,7 @@ export function address_sankey(selector, query, options) {
     const sankey = d3Sankey
       .sankeyCircular()
       .nodeId((d) => d.id)
-      .nodeAlign(d3Sankey.sankeyJustify)
+      .nodeAlign(d3Sankey.sankeyFixed)
       .nodeWidth(50)
       // .nodePadding(400)
       .nodePaddingRatio(0.7)
@@ -858,6 +903,7 @@ export function address_sankey(selector, query, options) {
     g.sankey = sankey
 
     const graph = sankey(data)
+    const rootNode = _.find(graph.nodes, { id: query.variables.address })
     console.log(graph)
 
     function getAllPaths(graph) {
@@ -968,9 +1014,9 @@ export function address_sankey(selector, query, options) {
       })
 
       return _.concat(pathsFromRootToNodes, pathsFromNodesToRoot)
-		}
-		
-		const allPaths = getAllPaths(graph)
+    }
+
+    const allPaths = getAllPaths(graph)
     console.log(allPaths)
 
     function isDuplicate(arrays, arr) {
@@ -994,8 +1040,11 @@ export function address_sankey(selector, query, options) {
       const dataToHighlight = {}
 
       _.forEach(nodes, (n) => {
-				// что подсвечивать: от рутового или до или все вместе
-				const paths = _.concat(getPaths(n.id, allPaths), getPaths(n.id, allPaths, false))
+        // что подсвечивать: от рутового или до или все вместе
+        const paths = _.concat(
+          getPaths(n.id, allPaths),
+          getPaths(n.id, allPaths, false)
+        )
 
         const nodesToHighlight = _.uniq(_.flattenDeep(paths))
         const linksToHighlight = []
@@ -1014,14 +1063,17 @@ export function address_sankey(selector, query, options) {
 
     const dataToHighlight = getDataToHighlight(graph.nodes, allPaths)
 
-    const svg = d3
-      .select(selector)
-      .append('svg')
-      // .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('width', '100%')
-      .attr('height', '100%')
-
     const rootG = svg.append('g')
+
+    rootG
+      .append('rect')
+      .attr('class', 'divider')
+      .attr('x', rootNode.x0)
+      .attr('y', -10000)
+      .attr('height', 20000)
+      .attr('width', rootNode.x1 - rootNode.x0)
+      .attr('fill', 'silver')
+      .attr('opacity', 0.5)
 
     const linkG = rootG
       .append('g')
@@ -1176,17 +1228,17 @@ export function address_sankey(selector, query, options) {
       }
 
       return opacity
-		}
-		
-		function highlightLinks(link, id) {
-			const highlight = _.some(
-				dataToHighlight[id].linksToHighlight,
-				(couple) => {
-					return link.source.id == couple[0] && link.target.id == couple[1]
-				}
-			)
-			return highlight ? 1 : 0.3
-		}
+    }
+
+    function highlightLinks(link, id) {
+      const highlight = _.some(
+        dataToHighlight[id].linksToHighlight,
+        (couple) => {
+          return link.source.id == couple[0] && link.target.id == couple[1]
+        }
+      )
+      return highlight ? 1 : 0.3
+    }
 
     // function nodeMouseOver(e, d) {
     //   let thisId = d.id
@@ -1221,7 +1273,9 @@ export function address_sankey(selector, query, options) {
 
       node.selectAll('rect').style('opacity', (d) => highlightNodes(d, thisId))
 
-      d3.selectAll('.sankey-link').style('opacity', (l) => highlightLinks(l, thisId))
+      d3.selectAll('.sankey-link').style('opacity', (l) =>
+        highlightLinks(l, thisId)
+      )
 
       node.selectAll('text').style('opacity', (d) => highlightNodes(d, thisId))
 
@@ -1261,9 +1315,9 @@ export function address_sankey(selector, query, options) {
     }
 
     function nodeMouseOut(e, d) {
-      d3.selectAll('rect').style('opacity', 1)
-      d3.selectAll('.sankey-link').style('opacity', linkOpacity)
-      d3.selectAll('text').style('opacity', 1)
+      node.selectAll('rect').style('opacity', 1)
+      link.selectAll('.sankey-link').style('opacity', linkOpacity)
+      node.selectAll('text').style('opacity', 1)
       tooltip.style('visibility', 'hidden')
     }
 
@@ -1283,9 +1337,11 @@ export function address_sankey(selector, query, options) {
       let source = l.source.id
       let target = l.target.id
 
-      d3.selectAll('.sankey-link').style('opacity', (l) =>
-        l.source.id == source && l.target.id == target ? 1 : 0.3
-      )
+      link
+        .selectAll('.sankey-link')
+        .style('opacity', (l) =>
+          l.source.id == source && l.target.id == target ? 1 : 0.3
+        )
 
       node.selectAll('rect').style('opacity', (d) => {
         return d.id == source || d.id == target ? 1 : 0.3
@@ -1302,6 +1358,7 @@ export function address_sankey(selector, query, options) {
 					<li>${l.source.label}</li>
 					<li>To:</li>
 					<li>${l.target.label}</li>
+					<li>Count of transfers: ${l.countOfTransfers}</li>
 				</ul>`
       )
     }
@@ -1324,9 +1381,9 @@ export function address_sankey(selector, query, options) {
     }
 
     function linkMouseOut(e, l) {
-      d3.selectAll('rect').style('opacity', 1)
-      d3.selectAll('.sankey-link').style('opacity', 1)
-      d3.selectAll('text').style('opacity', 1)
+      node.selectAll('rect').style('opacity', 1)
+      link.selectAll('.sankey-link').style('opacity', 1)
+      node.selectAll('text').style('opacity', 1)
       tooltip.style('visibility', 'hidden')
     }
 
@@ -1334,6 +1391,10 @@ export function address_sankey(selector, query, options) {
       .zoom()
       .on('zoom', function(e) {
         rootG.select('.nodes').attr('font-size', fontSize / e.transform.k)
+        rootG
+          .select('.divider')
+          .attr('y', (d) => -10000 / e.transform.k)
+          .attr('height', 20000 / e.transform.k)
         rootG.attr('transform', e.transform)
       })
       .on('start', function(e) {
