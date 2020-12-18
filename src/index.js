@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import _, { get } from 'lodash'
 import _n from 'numeral'
 import { setNumeralLocale } from './util/setNumeralLocale'
 
@@ -643,6 +643,7 @@ export function address_graph(selector, query, options) {
       g.initGraph()
     } else if (!isExpand) {
       g.setDataset()
+      if (g.dataset.nodes.length == 0) return
       g.expandNode(query.variables.address)
     } else {
       g.expandDataset()
@@ -700,8 +701,15 @@ export function address_sankey(selector, query, options) {
     const edgeColor = 'path'
     const textColor = options.theme == 'dark' ? 'white' : 'black'
     const strokeColor = options.theme == 'dark' ? 'white' : 'black'
-    const linkOpacity = options.theme == 'dark' ? 1 : 0.85
+    // const linkOpacity = options.theme == 'dark' ? 1 : 0.85
+    const opacity = {
+      node: 1,
+      link: options.theme == 'dark' ? 1 : 0.85,
+      address: 1,
+      annotation: 1,
+    }
     const fontSize = 12
+    const graphSize = { width: 3200, height: 1800 }
 
     const svg = d3
       .select(selector)
@@ -710,7 +718,7 @@ export function address_sankey(selector, query, options) {
       .attr('width', '100%')
       .attr('height', '100%')
 
-		// Exit if data is empty
+    // Exit if data is empty
     if (
       !query.data[query.cryptoCurrency].inbound &&
       !query.data[query.cryptoCurrency].outbound
@@ -729,7 +737,7 @@ export function address_sankey(selector, query, options) {
           node.smartContract.contractType == 'Generic'
         ) {
           // 'smart_contract'
-          return node.address
+          return null
         } else if (
           node.smartContract &&
           (node.smartContract.contractType == 'Token' ||
@@ -747,19 +755,19 @@ export function address_sankey(selector, query, options) {
           node.smartContract.contractType == 'MarginPositionToken'
         ) {
           // 'MarginPositionToken'
-          return node.annotation || node.address
+          return node.annotation || null
         } else if (
           node.smartContract &&
           node.smartContract.contractType == 'Multisig'
         ) {
           // 'multisig'
-          return node.annotation || node.address
+          return node.annotation || null
         } else if (
           node.smartContract &&
           node.smartContract.contractType == 'DEX'
         ) {
           // 'dex'
-          return node.annotation || node.address
+          return node.annotation || null
         } else {
           if (node.address == '') {
             // 'coinbase'
@@ -769,7 +777,7 @@ export function address_sankey(selector, query, options) {
             return node.annotation
           } else {
             // 'address'
-            return node.address
+            return null
           }
         }
       }
@@ -782,8 +790,8 @@ export function address_sankey(selector, query, options) {
           source: item.sender.address,
           target: item.receiver.address,
           amount: item.amount,
-					value: item.amount,
-					countOfTransfers: item.count,
+          value: item.amount,
+          countOfTransfers: item.count,
         })
         nodes.push({
           id: item.sender.address,
@@ -808,8 +816,8 @@ export function address_sankey(selector, query, options) {
           source: item.sender.address,
           target: item.receiver.address,
           amount: item.amount,
-					value: item.amount,
-					countOfTransfers: item.count,
+          value: item.amount,
+          countOfTransfers: item.count,
         })
         nodes.push({
           id: item.sender.address,
@@ -898,7 +906,7 @@ export function address_sankey(selector, query, options) {
       //   [(width - 60) * 0.05, (height - 60) * 0.1],
       //   [(width - 60) * 0.95, (height - 60) * 0.9],
       // ])
-      .size([3200, 1800])
+      .size([graphSize.width, graphSize.height])
 
     g.sankey = sankey
 
@@ -1063,7 +1071,7 @@ export function address_sankey(selector, query, options) {
 
     const dataToHighlight = getDataToHighlight(graph.nodes, allPaths)
 
-    const rootG = svg.append('g')
+    const rootG = svg.append('g').attr('class', 'root-g')
 
     rootG
       .append('rect')
@@ -1079,7 +1087,7 @@ export function address_sankey(selector, query, options) {
       .append('g')
       .attr('class', 'links')
       .attr('fill', 'none')
-      .attr('stroke-opacity', linkOpacity)
+      .attr('stroke-opacity', opacity.link)
       .selectAll('path')
 
     const nodeG = rootG
@@ -1126,10 +1134,12 @@ export function address_sankey(selector, query, options) {
       .attr('y', (d) => d.y0 - 4)
       .attr('text-anchor', 'middle')
       .attr('fill', textColor)
-      .text((d) =>
-        _.startsWith(d.label, '0x') || _.indexOf(d.label, ' ') == -1
-          ? _.truncate(d.label, { length: 15, separator: '...' })
-          : d.label
+      .attr('class', (d) => {
+        d.isHidden = false
+        return d.label ? 'annotation' : 'address'
+      })
+      .text(
+        (d) => d.label || _.truncate(d.id, { length: 15, separator: '...' })
       )
       .on('mouseover', nodeMouseOver)
       .on('mousemove', nodeMouseMove)
@@ -1201,33 +1211,13 @@ export function address_sankey(selector, query, options) {
 
     arrowsG.selectAll('.arrow-head').style('fill', strokeColor)
 
-    // function highlightNodes(node, id) {
-    //   let opacity = 0.3
-
-    //   if (node.id == id) {
-    //     opacity = 1
-    //   }
-    //   node.sourceLinks.forEach(function(link) {
-    //     if (link.target.id == id) {
-    //       opacity = 1
-    //     }
-    //   })
-    //   node.targetLinks.forEach(function(link) {
-    //     if (link.source.id == id) {
-    //       opacity = 1
-    //     }
-    //   })
-
-    //   return opacity
-    // }
-    function highlightNodes(node, id) {
-      let opacity = 0.3
-
+    function highlightNode(node, id) {
+      // isHidden, isHighlighted, isDarken,
       if (_.includes(dataToHighlight[id].nodesToHighlight, node.id)) {
-        opacity = 1
+        node.isHighlighted = true
+      } else {
+        node.isDarken = true
       }
-
-      return opacity
     }
 
     function highlightLinks(link, id) {
@@ -1237,47 +1227,56 @@ export function address_sankey(selector, query, options) {
           return link.source.id == couple[0] && link.target.id == couple[1]
         }
       )
-      return highlight ? 1 : 0.3
+      if (highlight) {
+        link.isHighlighted = true
+      } else {
+        link.isDarken = true
+      }
     }
 
-    // function nodeMouseOver(e, d) {
-    //   let thisId = d.id
+    function getOpacity(elem, type) {
+      let opacity
+      switch (type) {
+        case 'node':
+          opacity = elem.isHighlighted ? 1 : elem.isDarken ? 0.3 : 1
+          break
 
-    //   node.selectAll('rect').style('opacity', (d) => highlightNodes(d, thisId))
+        case 'text':
+          opacity = elem.isHighlighted
+            ? 1
+            : elem.isHidden
+            ? 0
+            : elem.isDarken
+            ? 0.3
+            : 1
+          break
 
-    //   d3.selectAll('.sankey-link').style('opacity', (l) =>
-    //     l.source.id == thisId || l.target.id == thisId ? 1 : 0.3
-    //   )
+        case 'link':
+          opacity = elem.isHighlighted ? 1 : elem.isDarken ? 0.3 : 1
+          break
 
-    //   node.selectAll('text').style('opacity', (d) => highlightNodes(d, thisId))
+        default:
+          break
+      }
+      return opacity
+    }
 
-    //   let income = 0
-    //   _.each(d.targetLinks, (l) => {
-    //     income += l.amount
-    //   })
-    //   let outcome = 0
-    //   _.each(d.sourceLinks, (l) => {
-    //     outcome += l.amount
-    //   })
-
-    //   tooltip.style('visibility', 'visible').html(
-    //     `<ul>
-    // 			${income != 0 ? `<li>Income: ${format(income)}</li>` : ''}
-    // 			${outcome != 0 ? `<li>Outcome: ${format(outcome)}</li>` : ''}
-    // 			<li>${d.label}</li>
-    // 		</ul>`
-    //   )
-    // }
     function nodeMouseOver(e, d) {
       let thisId = d.id
 
-      node.selectAll('rect').style('opacity', (d) => highlightNodes(d, thisId))
+      node.selectAll('rect').style('opacity', (d) => {
+        highlightNode(d, thisId)
+        return getOpacity(d, 'node')
+      })
 
-      d3.selectAll('.sankey-link').style('opacity', (l) =>
+      d3.selectAll('.sankey-link').style('opacity', (l) => {
         highlightLinks(l, thisId)
-      )
+        return getOpacity(l, 'link')
+      })
 
-      node.selectAll('text').style('opacity', (d) => highlightNodes(d, thisId))
+      node.selectAll('text').style('opacity', (d) => {
+        return getOpacity(d, 'text')
+      })
 
       let income = 0
       _.each(d.targetLinks, (l) => {
@@ -1292,7 +1291,7 @@ export function address_sankey(selector, query, options) {
         `<ul>
 					${income != 0 ? `<li>Income: ${format(income)}</li>` : ''}
 					${outcome != 0 ? `<li>Outcome: ${format(outcome)}</li>` : ''}
-					<li>${d.label}</li>
+					<li>${d.label || d.id}</li>
 				</ul>`
       )
     }
@@ -1315,9 +1314,19 @@ export function address_sankey(selector, query, options) {
     }
 
     function nodeMouseOut(e, d) {
-      node.selectAll('rect').style('opacity', 1)
-      link.selectAll('.sankey-link').style('opacity', linkOpacity)
-      node.selectAll('text').style('opacity', 1)
+      node.selectAll('rect').style('opacity', (d) => {
+        d.isHighlighted = false
+        d.isDarken = false
+        return getOpacity(d, 'node')
+      })
+      link.selectAll('.sankey-link').style('opacity', (l) => {
+        l.isHighlighted = false
+        l.isDarken = false
+        return getOpacity(d, 'link')
+      })
+      node.selectAll('text').style('opacity', (d) => {
+        return getOpacity(d, 'text')
+      })
       tooltip.style('visibility', 'hidden')
     }
 
@@ -1337,27 +1346,35 @@ export function address_sankey(selector, query, options) {
       let source = l.source.id
       let target = l.target.id
 
-      link
-        .selectAll('.sankey-link')
-        .style('opacity', (l) =>
-          l.source.id == source && l.target.id == target ? 1 : 0.3
-        )
+      link.selectAll('.sankey-link').style('opacity', (l) => {
+        if (l.source.id == source && l.target.id == target) {
+          l.isHighlighted = true
+        } else {
+          l.isDarken = true
+        }
+        return getOpacity(l, 'link')
+      })
 
       node.selectAll('rect').style('opacity', (d) => {
-        return d.id == source || d.id == target ? 1 : 0.3
+        if (d.id == source || d.id == target) {
+          d.isHighlighted = true
+        } else {
+					d.isDarken = true
+				}
+				return getOpacity(d, 'node')
       })
 
       node.selectAll('text').style('opacity', (d) => {
-        return d.id == source || d.id == target ? 1 : 0.3
+        return getOpacity(d, 'text')
       })
 
       tooltip.style('visibility', 'visible').html(
         `<ul>
 					<li>Amount: ${format(l.amount)}</li>
 					<li>From:</li>
-					<li>${l.source.label}</li>
+					<li>${l.source.label || l.source.id}</li>
 					<li>To:</li>
-					<li>${l.target.label}</li>
+					<li>${l.target.label || l.target.id}</li>
 					<li>Count of transfers: ${l.countOfTransfers}</li>
 				</ul>`
       )
@@ -1381,9 +1398,19 @@ export function address_sankey(selector, query, options) {
     }
 
     function linkMouseOut(e, l) {
-      node.selectAll('rect').style('opacity', 1)
-      link.selectAll('.sankey-link').style('opacity', 1)
-      node.selectAll('text').style('opacity', 1)
+      node.selectAll('rect').style('opacity', (d) => {
+				d.isHighlighted = false
+				d.isDarken = false
+        return getOpacity(d, 'node')
+      })
+      link.selectAll('.sankey-link').style('opacity', (l) => {
+				l.isHighlighted = false
+				l.isDarken = false
+				return getOpacity(l, 'link')
+			})
+      node.selectAll('text').style('opacity', (d) => {
+				return getOpacity(d, 'text')
+			})
       tooltip.style('visibility', 'hidden')
     }
 
@@ -1391,6 +1418,17 @@ export function address_sankey(selector, query, options) {
       .zoom()
       .on('zoom', function(e) {
         rootG.select('.nodes').attr('font-size', fontSize / e.transform.k)
+        if (fontSize / e.transform.k > 16) {
+          node.selectAll('.address').style('opacity', (d) => {
+            d.isHidden = true
+            return getOpacity(d, 'text')
+          })
+        } else {
+          node.selectAll('.address').style('opacity', (d) => {
+            d.isHidden = false
+            return getOpacity(d, 'text')
+          })
+        }
         rootG
           .select('.divider')
           .attr('y', (d) => -10000 / e.transform.k)
@@ -1409,9 +1447,17 @@ export function address_sankey(selector, query, options) {
         }
       })
 
+    const initScale = 0.25
+
     svg
       .call(zoom)
-      .call(zoom.transform, d3.zoomIdentity.translate(200, 80).scale(0.25))
+      // .call(zoom.transform, d3.zoomIdentity.translate(200, 80).scale(0.25))
+      .call(
+        zoom.transform,
+        d3.zoomIdentity
+          .translate((width - graphSize.width * initScale) / 2, 120000 / width)
+          .scale(initScale)
+      )
       .on('dblclick.zoom', null)
 
     const chart = svg.node()
@@ -1530,6 +1576,14 @@ export function addControls(selector, query, options) {
 
     graphDepthLevel.find('input').on('change', function(e) {
       const value = parseInt($(this).val())
+      if (!value || value == 0) {
+        $(this).val(
+          e.target.id == 'inbound-level'
+            ? query.variables.inboundDepth
+            : query.variables.outboundDepth
+        )
+        return
+      }
       const variables =
         e.target.id == 'inbound-level'
           ? { inboundDepth: value }
