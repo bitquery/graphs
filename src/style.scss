@@ -141,8 +141,97 @@
   left: 50%;
   transform: translate(-50%);
   max-width: 30%;
+  &__body {
+    display: flex;
+    align-items: center;
+  }
+  &__button-block {
+    display: flex;
+    flex-flow: column;
+  }
+  &__button {
+    border: 1px solid rgb(118, 118, 118);
+    width: 16px;
+    height: 16px;
+    // border-radius: 2px;
+    position: relative;
+    margin: 0;
+    background: white;
+    display: inline-block;
+    vertical-align: middle;
+    outline: none;
+    &--increment {
+      // margin-bottom: 4px
+      border-radius: 2px 2px 0 0;
+    }
+    &--decrement {
+      border-radius: 0 0 2px 2px;
+    }
+    &--increment:before,
+    &--increment:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: black;
+    }
+    &--increment:before {
+      width: 2px;
+      border-radius: 1px;
+      margin: 3px auto;
+    }
+    &--increment:after {
+      margin: auto 3px;
+      height: 2px;
+      border-radius: 1px;
+    }
+    &--decrement:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: black;
+      margin: auto 3px;
+      height: 2px;
+      border-radius: 1px;
+    }
+    &:hover {
+      background: rgba(0, 0, 0, 0.15);
+    }
+    &:focus {
+      box-shadow: none;
+      outline: none;
+    }
+  }
+  &__label {
+    margin: 0;
+    &--inbound {
+      margin-right: 5px;
+    }
+
+    &--outbound {
+      margin-left: 5px;
+    }
+  }
   &__input {
-    margin: 0 10px 0 5px;
+    text-align: center;
+    height: 32px;
+    margin: 0 5px;
+  }
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox */
+  input[type='number'] {
+    -moz-appearance: textfield;
   }
 }
 
@@ -220,7 +309,19 @@
       border-color: #758591;
       color: #d6d6d6;
     }
-  }
+	}
+	.depth-level {
+		&__button {
+			background: #434e57;
+			border-color: #758591;
+			&::before, &::after {
+				background: #d6d6d6;
+			}
+			&:hover {
+				background: rgba(255, 255, 255, 0.1);
+			}
+		}
+	}
   .fullscreen-button {
     color: silver;
   }

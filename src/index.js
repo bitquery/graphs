@@ -1359,9 +1359,9 @@ export function address_sankey(selector, query, options) {
         if (d.id == source || d.id == target) {
           d.isHighlighted = true
         } else {
-					d.isDarken = true
-				}
-				return getOpacity(d, 'node')
+          d.isDarken = true
+        }
+        return getOpacity(d, 'node')
       })
 
       node.selectAll('text').style('opacity', (d) => {
@@ -1399,18 +1399,18 @@ export function address_sankey(selector, query, options) {
 
     function linkMouseOut(e, l) {
       node.selectAll('rect').style('opacity', (d) => {
-				d.isHighlighted = false
-				d.isDarken = false
+        d.isHighlighted = false
+        d.isDarken = false
         return getOpacity(d, 'node')
       })
       link.selectAll('.sankey-link').style('opacity', (l) => {
-				l.isHighlighted = false
-				l.isDarken = false
-				return getOpacity(l, 'link')
-			})
+        l.isHighlighted = false
+        l.isDarken = false
+        return getOpacity(l, 'link')
+      })
       node.selectAll('text').style('opacity', (d) => {
-				return getOpacity(d, 'text')
-			})
+        return getOpacity(d, 'text')
+      })
       tooltip.style('visibility', 'hidden')
     }
 
@@ -1574,20 +1574,33 @@ export function addControls(selector, query, options) {
 
     jqWrapper.append(graphDepthLevel)
 
+    graphDepthLevel.find('.depth-level__button--increment').on('click', (e) => {
+      const id = $(e.target).data().for
+      const input = $(`#${id}`)
+      input.val(parseInt(input.val()) + 1)
+      input.trigger('change')
+		})
+		
+		graphDepthLevel.find('.depth-level__button--decrement').on('click', (e) => {
+      const id = $(e.target).data().for
+      const input = $(`#${id}`)
+      input.val(parseInt(input.val()) - 1)
+      input.trigger('change')
+    })
+
     graphDepthLevel.find('input').on('change', function(e) {
       const value = parseInt($(this).val())
       if (!value || value == 0) {
         $(this).val(
-          e.target.id == 'inbound-level'
+          _.startsWith(e.target.id, 'inbound-level')
             ? query.variables.inboundDepth
             : query.variables.outboundDepth
         )
         return
       }
-      const variables =
-        e.target.id == 'inbound-level'
-          ? { inboundDepth: value }
-          : { outboundDepth: value }
+      const variables = _.startsWith(e.target.id, 'inbound-level')
+        ? { inboundDepth: value }
+        : { outboundDepth: value }
       query.request(variables)
     })
   }
