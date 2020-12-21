@@ -701,20 +701,13 @@ export function address_sankey(selector, query, options) {
     const edgeColor = 'path'
     const textColor = options.theme == 'dark' ? 'white' : 'black'
     const strokeColor = options.theme == 'dark' ? 'white' : 'black'
-    // const linkOpacity = options.theme == 'dark' ? 1 : 0.85
-    const opacity = {
-      node: 1,
-      link: options.theme == 'dark' ? 1 : 0.85,
-      address: 1,
-      annotation: 1,
-    }
+    const linkOpacity = options.theme == 'dark' ? 1 : 0.85
     const fontSize = 12
-    const graphSize = { width: 3200, height: 1800 }
+    const graphSize = {}
 
     const svg = d3
       .select(selector)
       .append('svg')
-      // .attr('viewBox', `0 0 ${width} ${height}`)
       .attr('width', '100%')
       .attr('height', '100%')
 
@@ -843,44 +836,28 @@ export function address_sankey(selector, query, options) {
       // nodes = _.uniqBy(_.sortBy(nodes, (n) => n.depthLevel * n.depthLevel).reverse(), 'id')
       // nodes = _.uniqBy(nodes, 'id')
 
+      const numberOnLevels = _.reduce(
+        nodes,
+        (result, n) => {
+          result[n.depthLevel]
+            ? (result[n.depthLevel] += 1)
+            : (result[n.depthLevel] = 1)
+          return result
+        },
+        {}
+      )
+      const maxVertical = _.max(_.values(numberOnLevels))
+      const maxHorizontal = _.values(numberOnLevels).length
+      graphSize.width = maxHorizontal * 650
+      graphSize.height = maxVertical * (300 - Math.min(200, Math.log10(maxVertical) * 100))
+
       return {
         links,
         nodes,
         units: query.currency,
       }
     }
-
     const data = prepareData(query.data)
-    // const data = {
-    //   nodes: [
-    //     { id: 'a', column: 0},
-    //     { id: 'b',  column: 0 },
-    //     { id: 'c',  column: 0 },
-    //     { id: 'd',  column: 1 },
-    //     { id: 'e', column: 1 },
-    //     { id: 'f', column: 2 },
-    //     { id: 'g', column: 2 },
-    //     { id: 'h', column: 2 },
-    //     { id: 'k', column: 3 },
-    //   ],
-    //   links: [
-    // 		{ source: 'a', target: 'e', value: 500 },
-    // 		{ source: 'b', target: 'e', value: 3000 },
-    // 		{ source: 'c', target: 'e', value: 10000 },
-    // 		{ source: 'd', target: 'e', value: 100000 },
-    // 		{ source: 'e', target: 'f', value: 30 },
-    // 		{ source: 'e', target: 'g', value: 2500000 },
-    // 		{ source: 'e', target: 'h', value: 10 },
-    // 		{ source: 'e', target: 'd', value: 700000000 },
-    // 		{ source: 'e', target: 'b', value: 20 },
-    // 		{ source: 'e', target: 'a', value: 20 },
-    // 		{ source: 'e', target: 'k', value: 4000000000 },
-    // 		{ source: 'h', target: 'e', value: 20 },
-    // 		{ source: 'k', target: 'e', value: 30 },
-    // 		{ source: 'e', target: 'c', value: 30 },
-    // 	],
-    // 	units: 'ZZZ'
-    // }
 
     const colorSchemaOdd = d3.scaleOrdinal(d3.schemeCategory10.slice(5))
     const colorSchemaEven = d3.scaleOrdinal(d3.schemeCategory10.slice(0, 5))
@@ -912,7 +889,6 @@ export function address_sankey(selector, query, options) {
 
     const graph = sankey(data)
     const rootNode = _.find(graph.nodes, { id: query.variables.address })
-    console.log(graph)
 
     function getAllPaths(graph) {
       const rootNode = _.find(graph.nodes, { id: query.variables.address })
@@ -1025,7 +1001,6 @@ export function address_sankey(selector, query, options) {
     }
 
     const allPaths = getAllPaths(graph)
-    console.log(allPaths)
 
     function isDuplicate(arrays, arr) {
       return _.some(arrays, (a) => {
@@ -1087,7 +1062,7 @@ export function address_sankey(selector, query, options) {
       .append('g')
       .attr('class', 'links')
       .attr('fill', 'none')
-      .attr('stroke-opacity', opacity.link)
+      .attr('stroke-opacity', linkOpacity)
       .selectAll('path')
 
     const nodeG = rootG
@@ -1116,9 +1091,7 @@ export function address_sankey(selector, query, options) {
       .append('rect')
       .attr('x', (d) => d.x0)
       .attr('y', (d) => (d.y1 - d.y0 < 1 ? d.y0 - 0.5 : d.y0))
-      // .attr('y', (d) => d.y0)
       .attr('height', (d) => (d.y1 - d.y0 < 1 ? 1 : d.y1 - d.y0))
-      // .attr('height', (d) => d.y1 - d.y0)
       .attr('width', (d) => d.x1 - d.x0)
       .attr('fill', color)
       .attr('stroke', strokeColor)
@@ -1418,7 +1391,7 @@ export function address_sankey(selector, query, options) {
       .zoom()
       .on('zoom', function(e) {
         rootG.select('.nodes').attr('font-size', fontSize / e.transform.k)
-        if (fontSize / e.transform.k > 16) {
+        if (fontSize / e.transform.k > 36) {
           node.selectAll('.address').style('opacity', (d) => {
             d.isHidden = true
             return getOpacity(d, 'text')
@@ -1438,7 +1411,6 @@ export function address_sankey(selector, query, options) {
       .on('start', function(e) {
         if (e.sourceEvent && e.sourceEvent.type == 'mousedown') {
           svg.attr('cursor', 'move')
-          // tooltip.style('visibility', 'hidden')
         }
       })
       .on('end', function(e) {
@@ -1447,15 +1419,14 @@ export function address_sankey(selector, query, options) {
         }
       })
 
-    const initScale = 0.25
+		const initScale = Math.min(width / graphSize.width, height / graphSize.height) * 3/4
 
     svg
       .call(zoom)
-      // .call(zoom.transform, d3.zoomIdentity.translate(200, 80).scale(0.25))
       .call(
         zoom.transform,
         d3.zoomIdentity
-          .translate((width - graphSize.width * initScale) / 2, 120000 / width)
+          .translate((width - graphSize.width * initScale) / 2, 120)
           .scale(initScale)
       )
       .on('dblclick.zoom', null)
@@ -1464,7 +1435,6 @@ export function address_sankey(selector, query, options) {
     $(selector).html(chart)
   }
 
-  // window.onresize = g.render
   query.components.push({
     id: selector,
     g,
@@ -1562,7 +1532,6 @@ export function addControls(selector, query, options) {
   }
 
   controls.refreshCurrencyFilter = () => {
-    // jqContainer.find('.currency-filter').remove()
     jqWrapper.find('.currency-filter').remove()
     controls.currencyFilter()
   }
@@ -1579,9 +1548,9 @@ export function addControls(selector, query, options) {
       const input = $(`#${id}`)
       input.val(parseInt(input.val()) + 1)
       input.trigger('change')
-		})
-		
-		graphDepthLevel.find('.depth-level__button--decrement').on('click', (e) => {
+    })
+
+    graphDepthLevel.find('.depth-level__button--decrement').on('click', (e) => {
       const id = $(e.target).data().for
       const input = $(`#${id}`)
       input.val(parseInt(input.val()) - 1)
