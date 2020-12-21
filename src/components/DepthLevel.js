@@ -1,7 +1,7 @@
 export const DepthLevel = (inboundDepth, outboundDepth) => {
 	const rand = parseInt(Math.random() * 10000)
   return `<div class="depth-level">
-						<div>Depth level</div>
+						<h4 class="depth-level__header">Depth level</h4>
 						
 						<div class=depth-level__body>
 							<label class="depth-level__label depth-level__label--inbound" for="inbound-level-${rand}">Inbound</label>

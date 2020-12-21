@@ -1,4 +1,4 @@
-import _, { get } from 'lodash'
+import _ from 'lodash'
 import _n from 'numeral'
 import { setNumeralLocale } from './util/setNumeralLocale'
 
@@ -21,7 +21,6 @@ import * as d3PathArrows from 'd3-path-arrows'
 import uid from './util/uid'
 
 import './style.scss'
-import { path } from 'd3'
 
 setNumeralLocale(_n)
 
@@ -876,13 +875,8 @@ export function address_sankey(selector, query, options) {
       .nodeId((d) => d.id)
       .nodeAlign(d3Sankey.sankeyFixed)
       .nodeWidth(50)
-      // .nodePadding(400)
       .nodePaddingRatio(0.7)
       .circularLinkGap(15)
-      // .extent([
-      //   [(width - 60) * 0.05, (height - 60) * 0.1],
-      //   [(width - 60) * 0.95, (height - 60) * 0.9],
-      // ])
       .size([graphSize.width, graphSize.height])
 
     g.sankey = sankey
@@ -999,7 +993,6 @@ export function address_sankey(selector, query, options) {
 
       return _.concat(pathsFromRootToNodes, pathsFromNodesToRoot)
     }
-
     const allPaths = getAllPaths(graph)
 
     function isDuplicate(arrays, arr) {

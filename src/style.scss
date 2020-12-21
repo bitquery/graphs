@@ -138,9 +138,16 @@
 .depth-level {
   position: absolute;
   top: 20px;
-  left: 50%;
+	left: 50%;
+	padding: 3px;
   transform: translate(-50%);
-  max-width: 30%;
+	max-width: 30%;
+	&__header {
+		font-size: inherit;
+		font-weight: 400;
+		text-align: center;
+		padding-right: 16px;
+	}
   &__body {
     display: flex;
     align-items: center;
