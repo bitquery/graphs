@@ -66,7 +66,9 @@ export function query(query) {
         .then((data) => {
           if (_.isEmpty(this.variables)) {
             this.variables = variables
-            this.currency = variables.currency || variables.network
+            if (!this.currency) {
+              this.currency = variables.currency
+            }
           }
           this.currencyType = typeof variables.currency
           this.currentAddress = variables.address
@@ -125,6 +127,10 @@ export function address_graph(selector, query, options) {
   )
 
   g.theme = options.theme || 'light'
+
+  if (!query.currency) {
+    query.currency = options.currency
+  }
 
   if (g.theme == 'dark') {
     jqContainer.parents('.card').addClass('dark')
@@ -674,6 +680,10 @@ export function address_sankey(selector, query, options) {
   <script>`
         ))
 
+  if (!query.currency) {
+    query.currency = options.currency
+  }
+
   jqContainer.addClass('graph')
   jqContainer.wrap('<div class="wrapper">')
   const jqWrapper = jqContainer.parent('.wrapper')
@@ -848,7 +858,8 @@ export function address_sankey(selector, query, options) {
       const maxVertical = _.max(_.values(numberOnLevels))
       const maxHorizontal = _.values(numberOnLevels).length
       graphSize.width = maxHorizontal * 650
-      graphSize.height = maxVertical * (300 - Math.min(200, Math.log10(maxVertical) * 100))
+      graphSize.height =
+        maxVertical * (300 - Math.min(200, Math.log10(maxVertical) * 100))
 
       return {
         links,
@@ -1412,7 +1423,8 @@ export function address_sankey(selector, query, options) {
         }
       })
 
-		const initScale = Math.min(width / graphSize.width, height / graphSize.height) * 3/4
+    const initScale =
+      (Math.min(width / graphSize.width, height / graphSize.height) * 3) / 4
 
     svg
       .call(zoom)
@@ -1444,6 +1456,7 @@ export function addControls(selector, query, options) {
   controls.theme = options.theme
 
   controls.setCurrency = () => {
+    if (!controls.currencies) return
     query.currency = (
       _.find(controls.currencies, {
         search: query.variables.currency,
@@ -1490,7 +1503,7 @@ export function addControls(selector, query, options) {
   }
 
   controls.currencyFilter = () => {
-    if (controls.currencies.length == 0) return
+    if (!controls.currencies) return
     const select = $(CurrencyFilter())
     // currnecy value for search in graphql
     _.each(controls.currencies, function(c) {
@@ -1525,6 +1538,7 @@ export function addControls(selector, query, options) {
   }
 
   controls.refreshCurrencyFilter = () => {
+    if (!controls.currencies) return
     jqWrapper.find('.currency-filter').remove()
     controls.currencyFilter()
   }
