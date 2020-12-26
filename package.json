@@ -48,6 +48,7 @@
     "d3-sankey-circular": "^0.34.0",
     "lodash": "^4.17.20",
     "numeral": "^2.0.6",
+    "react": "^17.0.1",
     "vis": "^4.21.0-EOL"
   }
 }
