@@ -16,9 +16,9 @@ module.exports = {
 
   output: {
     filename: 'graphs.min.js',
-    path: path.resolve(__dirname, '../widgets/dist'),
+    // path: path.resolve(__dirname, '../widgets/dist'),
     // path: path.resolve(__dirname, '../explorer/app/javascript/packs'),
-    // path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'dist'),
     library: 'graphs',
     libraryTarget: 'umd',
   },
@@ -29,19 +29,34 @@ module.exports = {
       commonjs2: 'jquery',
       amd: 'jquery',
       var: '$',
-    },
-    React: {
-      commonjs: 'React',
-      commonjs2: 'React',
-      amd: 'React',
-      var: 'React',
-    },
-    ReactDOM: {
-      commonjs: 'ReactDOM',
-      commonjs2: 'ReactDOM',
-      amd: 'ReactDOM',
-      var: 'ReactDOM',
-    },
+		},
+		react: {
+			root: "React",
+			commonjs2: "react",
+			commonjs: "react",
+			amd: "react",
+			umd: "react",
+		},
+		"react-dom": {
+			root: "ReactDOM",
+			commonjs2: "react-dom",
+			commonjs: "react-dom",
+			amd: "react-dom",
+			umd: "react-dom",
+		},
+		// 'react': 'commonjs react', 'react-dom': 'commonjs react-dom',
+    // React: {
+    //   commonjs: 'React',
+    //   commonjs2: 'React',
+    //   amd: 'React',
+    //   var: 'React',
+    // },
+    // ReactDOM: {
+    //   commonjs: 'ReactDOM',
+    //   commonjs2: 'ReactDOM',
+    //   amd: 'ReactDOM',
+    //   var: 'ReactDOM',
+    // },
   },
 
   plugins: [
@@ -53,7 +68,7 @@ module.exports = {
     rules: [
       {
         test: /.(js|jsx)$/,
-        include: [],
+        include: path.resolve(__dirname, 'src'),
         loader: 'babel-loader',
       },
       {
@@ -95,8 +110,8 @@ module.exports = {
   },
 
   optimization: {
-    minimize: false,
-    // minimize: true,
+    // minimize: false,
+    minimize: true,
     minimizer: [
       new TerserPlugin({
         parallel: true,

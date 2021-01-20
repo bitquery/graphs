@@ -26,7 +26,12 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: white;
+	background: white;
+	&.dark {
+    color: #d6d6d6;
+    background-color: #434e57;
+    border: 1px solid #434e57;
+  }
   &.loading {
     filter: blur(5px);
   }
@@ -138,16 +143,16 @@
 .depth-level {
   position: absolute;
   top: 20px;
-	left: 50%;
-	padding: 3px;
+  left: 50%;
+  padding: 3px;
   transform: translate(-50%);
-	max-width: 30%;
-	&__header {
-		font-size: inherit;
-		font-weight: 400;
-		text-align: center;
-		padding-right: 16px;
-	}
+  max-width: 30%;
+  &__header {
+    font-size: inherit;
+    font-weight: 400;
+    text-align: center;
+    padding-right: 16px;
+  }
   &__body {
     display: flex;
     align-items: center;
@@ -316,19 +321,20 @@
       border-color: #758591;
       color: #d6d6d6;
     }
-	}
-	.depth-level {
-		&__button {
-			background: #434e57;
-			border-color: #758591;
-			&::before, &::after {
-				background: #d6d6d6;
-			}
-			&:hover {
-				background: rgba(255, 255, 255, 0.1);
-			}
-		}
-	}
+  }
+  .depth-level {
+    &__button {
+      background: #434e57;
+      border-color: #758591;
+      &::before,
+      &::after {
+        background: #d6d6d6;
+      }
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
   .fullscreen-button {
     color: silver;
   }
