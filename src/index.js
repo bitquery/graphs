@@ -643,7 +643,13 @@ export function address_graph(selector, query, options) {
 
   g.render = (isExpand) => {
     // plug if graph is empty
-    // if (query.data[_.keys(query.data)[0]].inbound.length == 0 && query.data[_.keys(query.data)[0]].outbound.length == 0) return
+    // console.log(query)
+    // if (
+    //   query.data[query.cryptoCurrency].inbound.length == 0 &&
+    //   query.data[query.cryptoCurrency].outbound.length == 0
+    // ) {
+    //   return
+    // }
     if (!g.dataset) {
       g.initGraph()
     } else if (!isExpand) {
@@ -722,8 +728,10 @@ export function address_sankey(selector, query, options) {
 
     // Exit if data is empty
     if (
-      !query.data[query.cryptoCurrency].inbound &&
-      !query.data[query.cryptoCurrency].outbound
+      (!query.data[query.cryptoCurrency].inbound &&
+        !query.data[query.cryptoCurrency].outbound) ||
+      (query.data[query.cryptoCurrency].inbound.length == 0 &&
+        query.data[query.cryptoCurrency].outbound.length == 0)
     ) {
       jqContainer.html(svg.node())
       return
@@ -1601,6 +1609,16 @@ export function addControls(selector, query, options) {
   }
 
   controls.refresh = () => {
+    if (
+      (!query.data[query.cryptoCurrency].inbound &&
+        !query.data[query.cryptoCurrency].outbound) ||
+      (query.data[query.cryptoCurrency].inbound.length == 0 &&
+        query.data[query.cryptoCurrency].outbound.length == 0)
+    ) {
+      return
+    }
+    // if (query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0) {return}
+
     controls.setCurrency()
     controls.editDetailLevel()
     controls.refreshCurrencyFilter()
@@ -1608,6 +1626,13 @@ export function addControls(selector, query, options) {
   }
 
   $('body').on('DOMSubtreeModified', selector, function render() {
+    if (
+      !query.data[query.cryptoCurrency].inbound &&
+      !query.data[query.cryptoCurrency].outbound
+    )
+      return
+    // if (query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0) {return}
+    // console.log(query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0)
     controls.setCurrency()
     controls.detailLevel()
     controls.currencyFilter()
