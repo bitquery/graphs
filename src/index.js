@@ -16,13 +16,25 @@ import { addModalGraphQL } from './addModalGraphQL'
 
 import * as d3 from 'd3'
 // import * as d3Sankey from 'd3-sankey-circular'
-import * as d3Sankey from '../../d3-sankey-circular/dist/d3-sankey-circular'
+// import * as d3Sankey from '../../d3-sankey-circular/dist/d3-sankey-circular'
+import * as d3Sankey from '@bitquery/d3-sankey-circular'
 import * as d3PathArrows from 'd3-path-arrows'
 import uid from './util/uid'
 
 import './style.scss'
 
 setNumeralLocale(_n)
+
+let props = {}
+
+export function init(url, apikey) {
+  let parameters = {
+    'url': url,
+    'apikey': apikey
+  };
+
+  props = _.merge(props, parameters);
+}
 
 export function query(query) {
   return {
@@ -44,7 +56,7 @@ export function query(query) {
     components: [],
     controls: [],
 
-    url: 'https://graphql.bitquery.io',
+    url: props['url'],
     request: function(variables, isExpand = false, refresh = true) {
       if (!_.isEmpty(this.variables)) {
         this.loading = true
@@ -56,6 +68,7 @@ export function query(query) {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          'X-API-KEY': props['apikey']
         },
         body: JSON.stringify({
           query: this.query,

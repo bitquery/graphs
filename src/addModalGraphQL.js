@@ -56,6 +56,7 @@ export const addModalGraphQL = (container, options, query) => {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
+          'X-API-KEY': props['apikey']
         },
         body: JSON.stringify(graphQLParams),
       }).then((response) => response.json())
