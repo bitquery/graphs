@@ -1,6 +1,6 @@
 {
   "name": "@bitquery/graph",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Graph-type widgets library",
   "main": "dist/graphs.min.js",
   "module": "dist/graphs.min.js",
