@@ -25,7 +25,7 @@ import './style.scss'
 
 setNumeralLocale(_n)
 
-let props = {}
+var props = {}
 
 export function init(url, apikey) {
   let parameters = {
