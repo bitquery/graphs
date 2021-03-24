@@ -25,7 +25,7 @@ import './style.scss'
 
 setNumeralLocale(_n)
 
-var props = {}
+let props = {}
 
 export function init(url, apikey) {
   let parameters = {
@@ -1618,7 +1618,7 @@ export function addControls(selector, query, options) {
     menu.append(buttonsBlock)
 
     addModalJS(buttonsBlock, query.JSCode, options, query)
-    addModalGraphQL(buttonsBlock, options, query)
+    addModalGraphQL(buttonsBlock, options, query, props)
   }
 
   controls.refresh = () => {

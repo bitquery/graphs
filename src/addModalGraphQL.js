@@ -1,4 +1,4 @@
-export const addModalGraphQL = (container, options, query) => {
+export const addModalGraphQL = (container, options, query, props) => {
   const original = {
     query: query.query,
 		variables: JSON.stringify(query.variables),
