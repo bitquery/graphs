@@ -62,8 +62,6 @@ export const addModalGraphQL = (container, options, query, props) => {
       }).then((response) => response.json())
     }
 
-    console.log(props);
-
     ReactDOM.render(
       React.createElement(GraphiQL, {
         fetcher: graphQLFetcher,
