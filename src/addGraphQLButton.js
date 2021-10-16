@@ -11,6 +11,7 @@ export const addGraphQLButton = (container, query, ideUrl) => {
     container.append(modalGQL)
 
     $(modalGQL).on('click', (e) => {
+        let wwindow = window.open()
         fetch(ideUrl, {
             method: 'POST',
             headers: {
@@ -24,7 +25,8 @@ export const addGraphQLButton = (container, query, ideUrl) => {
         })
             .then((res) => {
                 if (res.status === 200 || res.status === 302) {
-                    window.open(res.url, '_blank').focus()
+                    wwindow.location.href = res.url
+                    // window.open(res.url, '_blank').focus()
                     // res.redirect(302, res.url)
                 } else {
                     console.log(res.message)
