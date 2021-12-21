@@ -26,10 +26,11 @@ setNumeralLocale(_n)
 
 let props = {}
 
-export function init(graphqlUrl, ideUrl) {
+export function init(graphqlUrl, ideUrl, csrfToken) {
     let parameters = {
         'graphqlUrl': graphqlUrl,
-        'ideUrl': ideUrl
+        'ideUrl': ideUrl,
+        'csrfToken': csrfToken
     };
 
     props = _.merge(props, parameters);
@@ -67,7 +68,9 @@ export function query(query) {
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
+                    'X-CSRF-Token': props['csrfToken']
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     query: this.query,
                     variables: _.defaults(variables, this.variables),
