@@ -737,7 +737,7 @@ export function address_sankey(selector, query, options) {
                     node.smartContract.contractType == 'Generic'
                 ) {
                     // 'smart_contract'
-                    return null
+                    return node.annotation || null
                 } else if (
                     node.smartContract &&
                     (node.smartContract.contractType == 'Token' ||
