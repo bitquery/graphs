@@ -205,7 +205,7 @@ export function address_graph(selector, query, options) {
                 // 'smart_contract'
                 return {
                     id: node.address,
-                    label: _.truncate(node.address, {length: 15, separator: '...'}),
+                    label: node.annotation || _.truncate(node.address, {length: 15, separator: '...'}),
                     title: 'Smart Contract ' + node.address,
                     shape: 'icon',
                     icon: {
