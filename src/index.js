@@ -184,7 +184,7 @@ export function address_graph(selector, query, options) {
                 // 'coinbase'
                 return {
                     id: node.address,
-                    label: 'Coinbase',
+                    label: 'Zero Address',
                     title: node.address,
                     shape: 'icon',
                     icon: {
@@ -325,7 +325,7 @@ export function address_graph(selector, query, options) {
                     // 'coinbase'
                     return {
                         id: node.address,
-                        label: 'Coinbase',
+                        label: 'Zero Address',
                         title: node.address,
                         shape: 'icon',
                         icon: {
@@ -731,7 +731,7 @@ export function address_sankey(selector, query, options) {
             const getLabel = (node) => {
                 if (node.address == '0x0000000000000000000000000000000000000000') {
                     // 'coinbase'
-                    return 'Coinbase'
+                    return 'Zero Address'
                 } else if (
                     node.smartContract &&
                     node.smartContract.contractType == 'Generic'
@@ -771,7 +771,7 @@ export function address_sankey(selector, query, options) {
                 } else {
                     if (node.address == '') {
                         // 'coinbase'
-                        return 'Coinbase'
+                        return 'Zero Address'
                     } else if (node.annotation) {
                         // 'annotated_address'
                         return node.annotation
