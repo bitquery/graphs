@@ -395,6 +395,9 @@ export function address_graph(selector, query, options) {
                 currency_name = query.currency
             }
 
+            console.log(edge.currency.symbol)
+            console.log(query.currency)
+
             let width = edge.amount > 1 ? 1.5 * Math.log10(edge.amount) + 1 : 1
             let value =
                 parseFloat(edge.amount) <= 1e-6
