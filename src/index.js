@@ -390,11 +390,13 @@ export function address_graph(selector, query, options) {
 
     g.prepareEdges = (edges, receiver = true) => {
         const prepareEdge = (edge) => {
-            if(edge.currency.symbol){
-                query.currency =  edge.currency.symbol
-            }
+            let currency_name = null
 
-            let currency_name = query.currency
+            if ("currency" in edge && "symbol" in edge.currency) {
+                currency_name = edge.currency.symbol
+            } else {
+                currency_name = query.currency
+            }
 
             let width = edge.amount > 1 ? 1.5 * Math.log10(edge.amount) + 1 : 1
             let value =
