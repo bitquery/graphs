@@ -898,10 +898,10 @@ export function address_sankey(selector, query, options) {
         g.sankey = sankey
 
         const graph = sankey(data)
-        const rootNode = _.find(graph.nodes, {id: query.variables.address})
+        const rootNode = _.find(graph.nodes, {id: query.variables.address.toLowerCase()})
 
         function getAllPaths(graph) {
-            const rootNode = _.find(graph.nodes, {id: query.variables.address})
+            const rootNode = _.find(graph.nodes, {id: query.variables.address.toLowerCase()})
             // const rootNode = _.find(graph.nodes, { id: 'e' })
 
             // const paths = []
