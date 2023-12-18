@@ -507,7 +507,7 @@ export function address_graph(selector, query, options) {
     }
 
     g.expandNode = (address) => {
-        const node = g.dataset.nodes.get(address)
+        const node = g.dataset.nodes.get(address.toLowerCase())
         if (!node.expanded) {
             node.expanded = true
             const prevColor = node.icon.color
@@ -561,7 +561,7 @@ export function address_graph(selector, query, options) {
     }
 
     g.expand = (address) => {
-        const node = g.dataset.nodes.get(address)
+        const node = g.dataset.nodes.get(address.toLowerCase())
         if (!node.expanded) {
             g.expandNode(address)
             query.request({address: address}, true, false)
