@@ -507,7 +507,7 @@ export function address_graph(selector, query, options) {
     }
 
     g.expandNode = (address) => {
-        const node = g.dataset.nodes.get(address.toLowerCase())
+        const node = g.dataset.nodes.get(address)
         if (!node.expanded) {
             node.expanded = true
             const prevColor = node.icon.color
@@ -561,7 +561,7 @@ export function address_graph(selector, query, options) {
     }
 
     g.expand = (address) => {
-        const node = g.dataset.nodes.get(address.toLowerCase())
+        const node = g.dataset.nodes.get(address)
         if (!node.expanded) {
             g.expandNode(address)
             query.request({address: address}, true, false)
@@ -898,10 +898,10 @@ export function address_sankey(selector, query, options) {
         g.sankey = sankey
 
         const graph = sankey(data)
-        const rootNode = _.find(graph.nodes, {id: query.variables.address.toLowerCase()})
+        const rootNode = _.find(graph.nodes, {id: query.variables.address})
 
         function getAllPaths(graph) {
-            const rootNode = _.find(graph.nodes, {id: query.variables.address.toLowerCase()})
+            const rootNode = _.find(graph.nodes, {id: query.variables.address})
             // const rootNode = _.find(graph.nodes, { id: 'e' })
 
             // const paths = []
