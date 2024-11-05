@@ -18,6 +18,9 @@ export const addGraphQLButton = (container, query, ideUrl) => {
             input.setAttribute('value', value);
             return input;
         }
+        console.log('JideUrl',ideUrl)
+        console.log('JSON.stringify(query.query)',JSON.stringify(query.query))
+        console.log('JSON.stringify(query.variables)',JSON.stringify(query.variables))
         let form = document.createElement('form');
         form.setAttribute('method', 'post');
         form.setAttribute('action', ideUrl);
@@ -25,9 +28,6 @@ export const addGraphQLButton = (container, query, ideUrl) => {
         form.setAttribute('enctype', 'application/json');
         form.appendChild(createHiddenField('query', JSON.stringify(query.query)));
         form.appendChild(createHiddenField('variables', JSON.stringify(query.variables)));
-        console.log('JideUrl',ideUrl)
-        console.log('JSON.stringify(query.query)',JSON.stringify(query.query))
-        console.log('JSON.stringify(query.variables)',JSON.stringify(query.variables))
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
