@@ -1624,22 +1624,36 @@ export function addControls(selector, query, options) {
         controls.refreshDepthLevel()
     }
 
-    $('body').on('DOMSubtreeModified', selector, function render() {
+    // $('body').on('DOMSubtreeModified', selector, function render() {
+    //     if (
+    //         !query.data[query.cryptoCurrency].inbound &&
+    //         !query.data[query.cryptoCurrency].outbound
+    //     )
+    //         return
+    //     // if (query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0) {return}
+    //     // console.log(query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0)
+    //     controls.setCurrency()
+    //     controls.detailLevel()
+    //     controls.currencyFilter()
+    //     controls.depthLevel()
+    //     controls.createBottomMenu()
+    //     $('body').off('DOMSubtreeModified', render)
+    // })
+    const observer = new MutationObserver(function render() {
         if (
             !query.data[query.cryptoCurrency].inbound &&
             !query.data[query.cryptoCurrency].outbound
         )
             return
-        // if (query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0) {return}
-        // console.log(query.data[query.cryptoCurrency].inbound.length == 0 && query.data[query.cryptoCurrency].outbound.length == 0)
         controls.setCurrency()
         controls.detailLevel()
         controls.currencyFilter()
         controls.depthLevel()
         controls.createBottomMenu()
-        $('body').off('DOMSubtreeModified', render)
+        observer.disconnect()
     })
 
+    observer.observe(document.querySelector(selector), { childList: true, subtree: true })
     query.controls.push(controls)
     return controls
 }
