@@ -1639,6 +1639,7 @@ export function addControls(selector, query, options) {
     //     controls.createBottomMenu()
     //     $('body').off('DOMSubtreeModified', render)
     // })
+
     const observer = new MutationObserver(function render() {
         if (
             !query.data[query.cryptoCurrency].inbound &&
